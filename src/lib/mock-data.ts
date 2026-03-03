@@ -68,7 +68,7 @@ export const athletes: AthleteProfile[] = [
 
 export const coaches: CoachProfile[] = [
   {
-    id: 'c1', name: 'Coach David Park', type: 'coach', avatar: '', location: 'Austin, TX',
+    id: 'c1', name: 'David Park', type: 'coach', avatar: '', location: 'Austin, TX',
     bio: '15 years coaching varsity basketball. 3 state titles. Developing champions on and off the court.',
     isVerified: true, isPublic: true, followers: 4500, following: 800, sport: 'Basketball',
     organization: 'Westlake High School', sportsOffered: ['Basketball'], title: 'Head Varsity Coach',
@@ -94,6 +94,48 @@ export const coaches: CoachProfile[] = [
     isVerified: false, isPublic: true, followers: 980, following: 200, sport: 'Volleyball',
     organization: 'Pacific Northwest Volleyball Club', sportsOffered: ['Volleyball'], title: 'Head Coach',
     createdAt: '2025-04-05'
+  },
+  {
+    id: 'c5', name: 'Robert "Bear" Williams', type: 'coach', avatar: '', location: 'Tuscaloosa, AL',
+    bio: 'SEC-level coaching experience. Specializing in offensive line development. 8 NFL draft picks mentored.',
+    isVerified: true, isPublic: true, followers: 4800, following: 320, sport: 'Football',
+    organization: 'Hillcrest High School', sportsOffered: ['Football'], title: 'Head Football Coach',
+    createdAt: '2025-01-05'
+  },
+  {
+    id: 'c6', name: 'Angela Torres', type: 'coach', avatar: '', location: 'Omaha, NE',
+    bio: 'College softball coach building a dynasty. CWS contender 3 straight years.',
+    isVerified: true, isPublic: true, followers: 2750, following: 410, sport: 'Softball',
+    organization: 'Creighton University', sportsOffered: ['Softball'], title: 'Head Softball Coach',
+    createdAt: '2025-02-01'
+  },
+  {
+    id: 'c7', name: 'Derek Simmons', type: 'coach', avatar: '', location: 'Baltimore, MD',
+    bio: 'High school baseball program ranked top 10 nationally. Fundamentals first, always.',
+    isVerified: true, isPublic: true, followers: 1650, following: 280, sport: 'Baseball',
+    organization: 'Calvert Hall College HS', sportsOffered: ['Baseball'], title: 'Head Baseball Coach',
+    createdAt: '2025-03-22'
+  },
+  {
+    id: 'c8', name: 'Priya Kapoor', type: 'coach', avatar: '', location: 'Denver, CO',
+    bio: 'Building Colorado\'s premier lacrosse club from the ground up. US Lacrosse certified.',
+    isVerified: false, isPublic: true, followers: 620, following: 190, sport: 'Lacrosse',
+    organization: 'Mile High Lacrosse Club', sportsOffered: ['Lacrosse'], title: 'Club Director & Head Coach',
+    createdAt: '2025-05-12'
+  },
+  {
+    id: 'c9', name: 'Tom Kowalski', type: 'coach', avatar: '', location: 'Pittsburgh, PA',
+    bio: 'Wrestling coach. State placer factory. 14 individual state champions in 20 years.',
+    isVerified: true, isPublic: true, followers: 1900, following: 150, sport: 'Wrestling',
+    organization: 'Canon-McMillan HS', sportsOffered: ['Wrestling'], title: 'Head Wrestling Coach',
+    createdAt: '2025-04-18'
+  },
+  {
+    id: 'c10', name: 'Chris Avery', type: 'coach', avatar: '', location: 'Richmond, VA',
+    bio: 'Mid-major basketball coach who develops overlooked talent into conference stars.',
+    isVerified: false, isPublic: true, followers: 1100, following: 340, sport: 'Basketball',
+    organization: 'VCU', sportsOffered: ['Basketball'], title: 'Assistant Coach',
+    createdAt: '2025-06-01'
   },
 ];
 
@@ -128,7 +170,7 @@ export const feedPosts: FeedPost[] = [
     sport: 'Basketball', likes: 234, comments: 45, shares: 12, createdAt: '2026-03-02T18:30:00Z'
   },
   {
-    id: 'p2', userId: 'c1', userName: 'Coach David Park', userAvatar: '', userType: 'coach',
+    id: 'p2', userId: 'c1', userName: 'David Park', userAvatar: '', userType: 'coach',
     isVerified: true, content: '🏀 OPEN TRYOUTS: Westlake High School varsity basketball. March 15-17. Bring your A-game. DM for details.',
     sport: 'Basketball', likes: 89, comments: 23, shares: 34, createdAt: '2026-03-01T14:00:00Z'
   },
@@ -162,7 +204,7 @@ export const events: Event[] = [
 
 export const allProfiles = [...athletes, ...coaches, ...recruiters];
 
-export const sports = ['Basketball', 'Football', 'Soccer', 'Baseball', 'Track & Field', 'Volleyball'];
+export const sports = ['Basketball', 'Football', 'Soccer', 'Baseball', 'Track & Field', 'Volleyball', 'Softball', 'Lacrosse', 'Wrestling'];
 
 export function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
