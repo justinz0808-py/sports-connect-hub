@@ -1,6 +1,4 @@
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Search, CheckCircle } from 'lucide-react';
 import { getInitials } from '@/lib/mock-data';
 
@@ -13,38 +11,40 @@ const conversations = [
 
 export default function Messages() {
   return (
-    <div className="min-h-screen pt-20 pb-12">
-      <div className="container max-w-2xl">
-        <h1 className="font-display text-2xl font-bold mb-6">Messages</h1>
+    <div className="min-h-screen pt-14 pb-20">
+      <div className="px-4 pt-4">
+        <h1 className="font-display text-xl font-bold mb-4">Messages</h1>
 
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search conversations..." className="pl-10 bg-secondary border-border" />
+          <Input placeholder="Search conversations..." className="pl-10 bg-secondary border-border min-h-[44px]" />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           {conversations.map(c => (
-            <div key={c.id} className={`glass-card p-4 cursor-pointer hover:border-primary/30 transition-colors ${c.unread ? 'border-primary/20' : ''}`}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-sm font-bold text-primary-foreground font-display">
-                  {getInitials(c.name)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm truncate ${c.unread ? 'font-bold' : 'font-medium'}`}>{c.name}</span>
-                    {c.isVerified && <CheckCircle className="h-3 w-3 text-verified shrink-0" />}
-                    <span className="text-xs text-muted-foreground ml-auto shrink-0">{c.time}</span>
-                  </div>
-                  <p className={`text-xs truncate mt-0.5 ${c.unread ? 'text-foreground' : 'text-muted-foreground'}`}>{c.lastMessage}</p>
-                </div>
-                {c.unread && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+            <div
+              key={c.id}
+              className={`glass-card rounded-xl px-4 cursor-pointer active:border-primary/30 transition-colors flex items-center gap-3 ${c.unread ? 'border-primary/20' : ''}`}
+              style={{ height: 72 }}
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-sm font-bold text-primary-foreground font-display">
+                {getInitials(c.name)}
               </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm truncate ${c.unread ? 'font-bold' : 'font-medium'}`}>{c.name}</span>
+                  {c.isVerified && <CheckCircle className="h-3 w-3 text-verified shrink-0" />}
+                  <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{c.time}</span>
+                </div>
+                <p className={`text-xs truncate mt-0.5 ${c.unread ? 'text-foreground' : 'text-muted-foreground'}`}>{c.lastMessage}</p>
+              </div>
+              {c.unread && <div className="h-2 w-2 rounded-full bg-primary shrink-0" />}
             </div>
           ))}
         </div>
 
-        <p className="text-center text-sm text-muted-foreground mt-8">
-          Connect with users to start messaging. Messages are private between connected users.
+        <p className="text-center text-xs text-muted-foreground mt-8">
+          Connect with users to start messaging.
         </p>
       </div>
     </div>
