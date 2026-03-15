@@ -32,13 +32,13 @@ const item = {
 
 export default function Landing() {
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-screen pt-14 pb-20 overflow-x-hidden">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(190_100%_50%/0.08),transparent_60%)]" />
-        <div className="container relative flex min-h-[85vh] flex-col items-center justify-center text-center py-20">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(224_76%_40%/0.08),transparent_60%)]" />
+        <div className="px-4 relative flex min-h-[70vh] flex-col items-center justify-center text-center py-12">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <Badge variant="outline" className="mb-6 border-primary/30 px-4 py-1.5 text-sm text-primary">
+            <Badge variant="outline" className="mb-4 border-primary/30 px-3 py-1 text-xs text-primary">
               The network built for athletes
             </Badge>
           </motion.div>
@@ -47,7 +47,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] max-w-4xl"
+            className="font-display text-3xl font-bold tracking-tight leading-[1.1]"
           >
             Where Athletes{' '}
             <span className="text-gradient-primary">Get Discovered</span>
@@ -57,26 +57,25 @@ export default function Landing() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed"
+            className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-sm"
           >
             The Locker Room connects athletes, coaches, and recruiters on one platform.
-            Build your athletic profile, showcase your highlights, and get noticed by the programs that matter.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
-            className="mt-10 flex flex-col sm:flex-row gap-4"
+            className="mt-8 flex flex-col gap-3 w-full max-w-xs"
           >
             <Link to="/feed">
-              <Button size="lg" className="bg-gradient-primary text-primary-foreground font-semibold text-base px-8 hover:opacity-90 shadow-glow">
+              <Button className="w-full bg-gradient-primary text-primary-foreground font-semibold min-h-[44px] active:opacity-90 shadow-glow">
                 Join The Locker Room
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Link to="/search">
-              <Button size="lg" variant="outline" className="text-base px-8">
+              <Button variant="outline" className="w-full min-h-[44px]">
                 Explore Athletes
               </Button>
             </Link>
@@ -87,12 +86,12 @@ export default function Landing() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.7, delay: 0.5 }}
-            className="mt-20 grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-16"
+            className="mt-12 grid grid-cols-2 gap-6 w-full max-w-xs"
           >
             {stats.map(s => (
               <div key={s.label} className="text-center">
-                <div className="font-display text-3xl font-bold text-gradient-primary">{s.value}</div>
-                <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
+                <div className="font-display text-2xl font-bold text-gradient-primary">{s.value}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">{s.label}</div>
               </div>
             ))}
           </motion.div>
@@ -100,27 +99,31 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section className="py-24 border-t border-border">
-        <div className="container">
-          <div className="text-center mb-16">
-            <h2 className="font-display text-3xl sm:text-4xl font-bold">Everything You Need to <span className="text-gradient-primary">Compete</span></h2>
-            <p className="mt-4 text-muted-foreground max-w-xl mx-auto">Built specifically for the sports community — not a generic social network with a sports skin.</p>
+      <section className="py-12 border-t border-border">
+        <div className="px-4">
+          <div className="text-center mb-8">
+            <h2 className="font-display text-2xl font-bold">Everything You Need to <span className="text-gradient-primary">Compete</span></h2>
+            <p className="mt-3 text-sm text-muted-foreground">Built specifically for the sports community.</p>
           </div>
 
           <motion.div
             variants={container}
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, margin: '-100px' }}
-            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            viewport={{ once: true, margin: '-50px' }}
+            className="grid grid-cols-1 gap-3"
           >
             {features.map(f => (
-              <motion.div key={f.title} variants={item} className="glass-card p-6 hover:border-primary/30 transition-colors">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 mb-4">
-                  <f.icon className="h-5 w-5 text-primary" />
+              <motion.div key={f.title} variants={item} className="glass-card p-4 rounded-xl active:border-primary/30 transition-colors">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <f.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-sm font-semibold mb-1">{f.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+                  </div>
                 </div>
-                <h3 className="font-display text-lg font-semibold mb-2">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -128,12 +131,12 @@ export default function Landing() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 border-t border-border">
-        <div className="container text-center">
-          <h2 className="font-display text-3xl sm:text-4xl font-bold">Ready to Step Into <span className="text-gradient-primary">The Locker Room</span>?</h2>
-          <p className="mt-4 text-muted-foreground max-w-lg mx-auto">Whether you're an athlete looking to get noticed, a coach building a roster, or a recruiter finding the next star — this is your platform.</p>
+      <section className="py-12 border-t border-border">
+        <div className="px-4 text-center">
+          <h2 className="font-display text-2xl font-bold">Ready to Step Into <span className="text-gradient-primary">The Locker Room</span>?</h2>
+          <p className="mt-3 text-sm text-muted-foreground">Whether you're an athlete, coach, or recruiter — this is your platform.</p>
           <Link to="/feed">
-            <Button size="lg" className="mt-8 bg-gradient-primary text-primary-foreground font-semibold px-10 hover:opacity-90 shadow-glow">
+            <Button className="mt-6 w-full max-w-xs bg-gradient-primary text-primary-foreground font-semibold min-h-[44px] active:opacity-90 shadow-glow">
               Get Started Free
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -142,13 +145,13 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+      <footer className="border-t border-border py-6">
+        <div className="px-4 flex flex-col items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-primary">
-              <span className="text-xs font-bold text-primary-foreground">L</span>
+            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-primary">
+              <span className="text-[10px] font-bold text-primary-foreground">L</span>
             </div>
-            <span className="font-display font-semibold text-foreground">The Locker Room</span>
+            <span className="font-display font-semibold text-foreground text-sm">The Locker Room</span>
           </div>
           <p>© 2026 The Locker Room. All rights reserved.</p>
         </div>
