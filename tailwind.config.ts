@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Inter Tight', 'sans-serif'],
+        display: ['Bebas Neue', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
       },
       colors: {
@@ -60,6 +60,9 @@ export default {
           foreground: "hsl(var(--warning-foreground))",
         },
         verified: "hsl(var(--verified))",
+        "type-athlete": "#D97706",
+        "type-coach": "#2563EB",
+        "type-recruiter": "#9333EA",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

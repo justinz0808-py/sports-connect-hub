@@ -10,7 +10,7 @@ export default function Navbar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary">
             <span className="text-base font-bold text-primary-foreground">L</span>
           </div>
-          <span className="font-display text-base font-bold tracking-tight">The Locker Room</span>
+          <span className="font-display text-lg tracking-wider">THE LOCKER ROOM</span>
         </Link>
         <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]">
           <Bell className="h-5 w-5 text-muted-foreground" />

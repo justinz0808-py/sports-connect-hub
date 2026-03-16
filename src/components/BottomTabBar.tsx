@@ -2,11 +2,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, Search, PlusCircle, MessageSquare, User } from 'lucide-react';
 
 const tabs = [
-  { label: 'Home', href: '/feed', icon: Home },
-  { label: 'Search', href: '/search', icon: Search },
-  { label: 'Post', href: '/post', icon: PlusCircle },
-  { label: 'Messages', href: '/messages', icon: MessageSquare },
-  { label: 'Profile', href: '/profile/a1', icon: User },
+  { label: 'HOME', href: '/feed', icon: Home },
+  { label: 'SEARCH', href: '/search', icon: Search },
+  { label: 'POST', href: '/post', icon: PlusCircle },
+  { label: 'MSGS', href: '/messages', icon: MessageSquare },
+  { label: 'PROFILE', href: '/profile/a1', icon: User },
 ];
 
 export default function BottomTabBar() {
@@ -30,7 +30,7 @@ export default function BottomTabBar() {
                 style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
               />
               <span
-                className="text-[10px] font-medium"
+                className="text-[10px] font-display tracking-wider"
                 style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
               >
                 {tab.label}
