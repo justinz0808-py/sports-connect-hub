@@ -210,13 +210,26 @@ export function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
 }
 
-export function getTypeColor(type: string): string {
+export function getTypeBorderColor(type: string): string {
   switch (type) {
-    case 'athlete': return 'bg-primary text-primary-foreground';
-    case 'coach': return 'bg-accent text-accent-foreground';
-    case 'recruiter': return 'bg-success text-success-foreground';
+    case 'athlete': return 'border-l-type-athlete';
+    case 'coach': return 'border-l-type-coach';
+    case 'recruiter': return 'border-l-type-recruiter';
+    default: return 'border-l-border';
+  }
+}
+
+export function getTypeBadgeStyle(type: string): string {
+  switch (type) {
+    case 'athlete': return 'bg-type-athlete text-[#0A0A0A]';
+    case 'coach': return 'bg-type-coach text-white';
+    case 'recruiter': return 'bg-type-recruiter text-white';
     default: return 'bg-muted text-muted-foreground';
   }
+}
+
+export function getTypeColor(type: string): string {
+  return getTypeBadgeStyle(type);
 }
 
 export function timeAgo(dateStr: string): string {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { allProfiles, getInitials, getTypeColor, sports } from '@/lib/mock-data';
+import { allProfiles, getInitials, getTypeBorderColor, getTypeBadgeStyle, sports } from '@/lib/mock-data';
 import { AthleteProfile } from '@/lib/types';
 import { Search as SearchIcon, CheckCircle, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -28,7 +28,7 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen pt-14 pb-20">
       <div className="px-4 pt-4">
-        <h1 className="font-display text-xl font-bold mb-4">Search</h1>
+        <h1 className="font-display text-2xl tracking-wide mb-4">SEARCH</h1>
 
         {/* Search bar */}
         <div className="relative mb-3">
@@ -92,16 +92,20 @@ export default function SearchPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
               >
-                <Link to={`/profile/${p.id}`} className="block glass-card p-4 rounded-xl active:border-primary/30 transition-colors">
+                <Link to={`/profile/${p.id}`} className={`block glass-card p-4 rounded-xl border-l-4 ${getTypeBorderColor(p.type)} active:border-primary/30 transition-colors relative`}>
+                  {/* Type badge top-right */}
+                  <span className={`absolute top-3 right-3 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getTypeBadgeStyle(p.type)}`}>
+                    {p.type}
+                  </span>
+
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-sm font-bold text-primary-foreground font-display">
                       {getInitials(p.name)}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 pr-16">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm truncate">{p.name}</span>
+                        <span className="font-display text-lg tracking-wide truncate">{p.name}</span>
                         {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-verified shrink-0" />}
-                        <Badge className={getTypeColor(p.type) + ' capitalize text-[10px] shrink-0'}>{p.type}</Badge>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
                         <span>{p.sport}</span>

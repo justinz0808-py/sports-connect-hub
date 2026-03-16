@@ -60,6 +60,9 @@ export default {
           foreground: "hsl(var(--warning-foreground))",
         },
         verified: "hsl(var(--verified))",
+        "type-athlete": "#D97706",
+        "type-coach": "#2563EB",
+        "type-recruiter": "#9333EA",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
