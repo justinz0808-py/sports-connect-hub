@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Inter Tight', 'sans-serif'],
+        display: ['Bebas Neue', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
       },
       colors: {
