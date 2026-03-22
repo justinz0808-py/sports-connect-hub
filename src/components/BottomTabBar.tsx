@@ -30,7 +30,7 @@ export default function BottomTabBar() {
                 style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
               />
               <span
-                className="text-[10px] font-display tracking-wider"
+                className="text-[10px] font-semibold tracking-wide"
                 style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
               >
                 {tab.label}
