@@ -35,7 +35,7 @@ export default function ProfileView() {
         <div className="w-full h-[160px] bg-gradient-primary relative">
           <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: borderColor }} />
           {/* Avatar overlapping cover */}
-          <div className="absolute -bottom-10 left-4 flex h-20 w-20 items-center justify-center rounded-full bg-card text-2xl font-bold text-foreground font-display border-4 border-background" style={{ boxShadow: `0 0 0 2px ${borderColor}` }}>
+          <div className="absolute -bottom-10 left-4 flex h-20 w-20 items-center justify-center rounded-full bg-card text-2xl font-bold text-foreground border-4 border-background" style={{ boxShadow: `0 0 0 2px ${borderColor}` }}>
             {getInitials(profile.name)}
           </div>
         </div>
@@ -43,7 +43,7 @@ export default function ProfileView() {
         <div className="px-4 pt-14">
           {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display text-2xl tracking-wide">{profile.name}</h1>
+            <h1 className="text-2xl">{profile.name}</h1>
             {profile.isVerified && <CheckCircle className="h-5 w-5 text-verified" />}
             <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getTypeBadgeStyle(profile.type)}`}>
               {profile.type}
@@ -60,8 +60,8 @@ export default function ProfileView() {
           </div>
 
           <div className="flex gap-6 mt-3 text-sm">
-            <span><strong className="text-foreground font-display text-lg">{profile.followers.toLocaleString()}</strong> <span className="text-muted-foreground">followers</span></span>
-            <span><strong className="text-foreground font-display text-lg">{profile.following.toLocaleString()}</strong> <span className="text-muted-foreground">following</span></span>
+            <span><strong className="text-foreground text-lg">{profile.followers.toLocaleString()}</strong> <span className="text-muted-foreground">followers</span></span>
+            <span><strong className="text-foreground text-lg">{profile.following.toLocaleString()}</strong> <span className="text-muted-foreground">following</span></span>
           </div>
 
           {/* Action buttons */}
@@ -73,7 +73,7 @@ export default function ProfileView() {
 
           {/* Bio */}
           <div className={`glass-card p-4 rounded-xl mt-4 border-l-4 ${getTypeBorderColor(profile.type)}`}>
-            <h2 className="font-display text-lg tracking-wide mb-2">ABOUT</h2>
+            <h2 className="text-lg mb-2">ABOUT</h2>
             <p className="text-muted-foreground leading-relaxed text-sm">{profile.bio}</p>
           </div>
 
@@ -81,14 +81,14 @@ export default function ProfileView() {
           {athlete && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(profile.type)}`}>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-display text-lg tracking-wide">KEY STATS</h2>
+                <h2 className="text-lg">KEY STATS</h2>
                 <div className="text-xs text-muted-foreground">{athlete.height} · {athlete.weight}</div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(athlete.stats).map(([key, val]) => (
                   <div key={key} className="rounded-lg bg-secondary p-3 text-center">
-                    <div className="font-display text-2xl text-primary">{val}</div>
-                    <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wide">{key}</div>
+                    <div className="text-2xl text-primary">{val}</div>
+                    <div className="text-[10px] text-muted-foreground mt-1 uppercase">{key}</div>
                   </div>
                 ))}
               </div>
@@ -98,7 +98,7 @@ export default function ProfileView() {
           {/* Coach details */}
           {coach && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(profile.type)}`}>
-              <h2 className="font-display text-lg tracking-wide mb-3">PROGRAM DETAILS</h2>
+              <h2 className="text-lg mb-3">PROGRAM DETAILS</h2>
               <div className="space-y-2 text-sm">
                 <p><span className="text-muted-foreground">Organization:</span> <span className="font-medium">{coach.organization}</span></p>
                 <p><span className="text-muted-foreground">Sports:</span> <span className="font-medium">{coach.sportsOffered.join(', ')}</span></p>
@@ -109,7 +109,7 @@ export default function ProfileView() {
           {/* Recruiter details */}
           {recruiter && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(profile.type)}`}>
-              <h2 className="font-display text-lg tracking-wide mb-3">CREDENTIALS</h2>
+              <h2 className="text-lg mb-3">CREDENTIALS</h2>
               <p className="text-sm text-muted-foreground">{recruiter.credentials}</p>
             </div>
           )}
@@ -117,7 +117,7 @@ export default function ProfileView() {
           {/* Athlete school info */}
           {athlete && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(profile.type)}`}>
-              <h2 className="font-display text-lg tracking-wide mb-3">SCHOOL</h2>
+              <h2 className="text-lg mb-3">SCHOOL</h2>
               <p className="font-medium text-sm">{athlete.school}</p>
               <p className="text-sm text-muted-foreground">Class of {athlete.graduationYear}</p>
             </div>
