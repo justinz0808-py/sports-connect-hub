@@ -45,7 +45,7 @@ export default function CoachDirectorySidebar({ onSelectCoach, selectedCoachId, 
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div>
-          <h2 className="font-display text-sm font-bold flex items-center gap-2">
+          <h2 className="text-sm font-bold flex items-center gap-2">
             <Users className="h-4 w-4 text-accent" />
             Coaches Directory
           </h2>
@@ -157,7 +157,7 @@ function CoachCard({
       }`}
     >
       <div className="flex items-start gap-2.5">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-accent text-xs font-bold text-accent-foreground font-display">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-accent text-xs font-bold text-accent-foreground">
           {getInitials(coach.name)}
         </div>
         <div className="flex-1 min-w-0">
