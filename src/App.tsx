@@ -15,6 +15,21 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const AppLayout = () => (
+  <>
+    <Navbar />
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/feed" element={<Feed />} />
+      <Route path="/search" element={<SearchPage />} />
+      <Route path="/profile/:id" element={<ProfileView />} />
+      <Route path="/messages" element={<Messages />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+    <BottomTabBar />
+  </>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -23,23 +38,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route
-            path="*"
-            element={
-              <>
-                <Navbar />
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/feed" element={<Feed />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route path="/profile/:id" element={<ProfileView />} />
-                  <Route path="/messages" element={<Messages />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <BottomTabBar />
-              </>
-            }
-          />
+          <Route path="/*" element={<AppLayout />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
