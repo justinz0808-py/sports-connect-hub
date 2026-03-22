@@ -19,7 +19,6 @@ const AppLayout = () => (
   <>
     <Navbar />
     <Routes>
-      <Route path="/" element={<Landing />} />
       <Route path="/feed" element={<Feed />} />
       <Route path="/search" element={<SearchPage />} />
       <Route path="/profile/:id" element={<ProfileView />} />
@@ -37,6 +36,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/*" element={<AppLayout />} />
         </Routes>
