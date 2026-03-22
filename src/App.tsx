@@ -10,9 +10,25 @@ import Feed from "@/pages/Feed";
 import SearchPage from "@/pages/SearchPage";
 import ProfileView from "@/pages/ProfileView";
 import Messages from "@/pages/Messages";
+import Auth from "@/pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const AppLayout = () => (
+  <>
+    <Navbar />
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/feed" element={<Feed />} />
+      <Route path="/search" element={<SearchPage />} />
+      <Route path="/profile/:id" element={<ProfileView />} />
+      <Route path="/messages" element={<Messages />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+    <BottomTabBar />
+  </>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -20,16 +36,10 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Navbar />
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/feed" element={<Feed />} />
-          <Route path="/search" element={<SearchPage />} />
-          <Route path="/profile/:id" element={<ProfileView />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/*" element={<AppLayout />} />
         </Routes>
-        <BottomTabBar />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
