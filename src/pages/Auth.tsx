@@ -98,7 +98,7 @@ const Auth = () => {
           <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center mb-3">
             <Trophy className="w-7 h-7 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl tracking-wide text-foreground">
+          <h1 className="text-3xl text-foreground">
             THE LOCKER ROOM
           </h1>
         </div>

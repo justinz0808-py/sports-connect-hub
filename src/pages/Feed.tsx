@@ -14,7 +14,7 @@ export default function Feed() {
   return (
     <div className="min-h-screen pt-14 pb-20">
       <div className="px-4 pt-4">
-        <h1 className="text-2xl tracking-wide mb-4">FEED</h1>
+        <h1 className="text-2xl mb-4">FEED</h1>
 
         {/* Sport filter pills — horizontal scroll */}
         <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none -mx-4 px-4">
@@ -52,7 +52,7 @@ export default function Feed() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap pr-16">
-                    <span className="text-base tracking-wide">{post.userName}</span>
+                    <span className="text-base">{post.userName}</span>
                     {post.isVerified && <CheckCircle className="h-3.5 w-3.5 text-verified" />}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">

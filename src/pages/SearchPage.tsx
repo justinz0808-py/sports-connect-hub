@@ -28,7 +28,7 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen pt-14 pb-20">
       <div className="px-4 pt-4">
-        <h1 className="text-2xl tracking-wide mb-4">SEARCH</h1>
+        <h1 className="text-2xl mb-4">SEARCH</h1>
 
         {/* Search bar */}
         <div className="relative mb-3">
@@ -104,7 +104,7 @@ export default function SearchPage() {
                     </div>
                     <div className="flex-1 min-w-0 pr-16">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg tracking-wide truncate">{p.name}</span>
+                        <span className="text-lg truncate">{p.name}</span>
                         {p.isVerified && <CheckCircle className="h-3.5 w-3.5 text-verified shrink-0" />}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
