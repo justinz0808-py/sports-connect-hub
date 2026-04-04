@@ -5,7 +5,7 @@ import { feedPosts, getInitials, getTypeBorderColor, getTypeBadgeStyle, timeAgo 
 import { Heart, MessageCircle, Share2, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const sportFilters = ['All', 'Basketball', 'Football', 'Soccer', 'Track & Field', 'Volleyball', 'Baseball'];
+const sportFilters = ['All', 'Basketball', 'Football', 'Soccer', 'Baseball', 'Track & Field', 'Volleyball', 'Swimming', 'Tennis', 'Golf', 'Lacrosse', 'Wrestling', 'Other'];
 
 export default function Feed() {
   const [activeSport, setActiveSport] = useState('All');

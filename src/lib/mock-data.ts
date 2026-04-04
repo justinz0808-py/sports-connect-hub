@@ -204,7 +204,7 @@ export const events: Event[] = [
 
 export const allProfiles = [...athletes, ...coaches, ...recruiters];
 
-export const sports = ['Basketball', 'Football', 'Soccer', 'Baseball', 'Track & Field', 'Volleyball', 'Softball', 'Lacrosse', 'Wrestling'];
+export const sports = ['Basketball', 'Football', 'Soccer', 'Baseball', 'Track & Field', 'Volleyball', 'Swimming', 'Tennis', 'Golf', 'Lacrosse', 'Wrestling', 'Other'];
 
 export function getInitials(name: string): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase();
