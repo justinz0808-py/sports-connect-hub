@@ -18,8 +18,13 @@ const SPORTS = [
   "Football",
   "Soccer",
   "Baseball",
-  "Track",
+  "Track & Field",
   "Volleyball",
+  "Swimming",
+  "Tennis",
+  "Golf",
+  "Lacrosse",
+  "Wrestling",
   "Other",
 ];
 

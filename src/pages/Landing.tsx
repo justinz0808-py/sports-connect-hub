@@ -70,7 +70,7 @@ export default function Landing() {
           >
             <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium mb-6 bg-card text-foreground border border-border">
               <span className="w-2 h-2 rounded-full bg-primary" />
-              Basketball-first platform
+              Built for every sport
             </span>
           </motion.div>
 
@@ -95,7 +95,7 @@ export default function Landing() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-lg md:text-xl font-normal max-w-lg mx-auto mb-8 text-muted-foreground"
           >
-            The platform where athletes and coaches connect. Free. Built for basketball.
+            The platform where athletes and coaches connect. Free. Built for your sport.
           </motion.p>
 
           <motion.div
