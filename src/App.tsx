@@ -11,6 +11,7 @@ import SearchPage from "@/pages/SearchPage";
 import ProfileView from "@/pages/ProfileView";
 import Messages from "@/pages/Messages";
 import Auth from "@/pages/Auth";
+import ProfileSetup from "@/pages/ProfileSetup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const AppLayout = () => (
     <Routes>
       <Route path="/feed" element={<Feed />} />
       <Route path="/search" element={<SearchPage />} />
+      <Route path="/profile" element={<ProfileView />} />
       <Route path="/profile/:id" element={<ProfileView />} />
       <Route path="/messages" element={<Messages />} />
       <Route path="*" element={<NotFound />} />
@@ -38,6 +40,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/profile/setup" element={<ProfileSetup />} />
           <Route path="/*" element={<AppLayout />} />
         </Routes>
       </BrowserRouter>

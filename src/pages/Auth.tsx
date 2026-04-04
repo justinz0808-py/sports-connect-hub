@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Trophy, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const SPORTS = [
   "Basketball",
@@ -44,6 +45,13 @@ const Auth = () => {
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Redirect if already logged in
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) navigate("/feed");
+    });
+  }, [navigate]);
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
@@ -71,18 +79,44 @@ const Auth = () => {
 
     setIsLoading(true);
 
-    // Simulate auth — replace with real Supabase auth later
-    await new Promise((r) => setTimeout(r, 1200));
-
-    toast({
-      title: isSignUp ? "Account created!" : "Welcome back!",
-      description: isSignUp
-        ? "Your profile has been created."
-        : "You've signed in successfully.",
-    });
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: fullName, user_type: userType, sport },
+        },
+      });
+      if (error) {
+        toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+      toast({ title: "Account created!", description: "Let's set up your profile." });
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
+        setIsLoading(false);
+        return;
+      }
+      toast({ title: "Welcome back!", description: "You've signed in successfully." });
+    }
 
     setIsLoading(false);
-    navigate("/feed");
+    navigate(isSignUp ? "/profile/setup" : "/feed");
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/feed` },
+    });
+    if (error) {
+      toast({ title: "Google sign in failed", description: error.message, variant: "destructive" });
+      setIsLoading(false);
+    }
   };
 
   const toggleMode = () => {
@@ -263,6 +297,8 @@ const Auth = () => {
             type="button"
             variant="outline"
             className="w-full h-11 text-sm font-medium gap-2"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path

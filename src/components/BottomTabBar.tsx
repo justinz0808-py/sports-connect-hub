@@ -8,7 +8,7 @@ const tabs = [
   { label: 'SEARCH', href: '/search', icon: Search },
   { label: 'POST', href: '#post', icon: PlusCircle },
   { label: 'MSGS', href: '/messages', icon: MessageSquare },
-  { label: 'PROFILE', href: '/profile/a1', icon: User },
+  { label: 'PROFILE', href: '/profile', icon: User },
 ];
 
 export default function BottomTabBar() {
