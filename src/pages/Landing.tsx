@@ -33,26 +33,26 @@ const item = {
 
 export default function Landing() {
   return (
-    <div className="min-h-screen overflow-x-hidden" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen overflow-x-hidden bg-background">
       {/* Top Nav */}
-      <nav className="sticky top-0 z-50 backdrop-blur-xl border-b" style={{ background: 'rgba(248,250,252,0.9)', borderColor: '#E2E8F0' }}>
+      <nav className="sticky top-0 z-50 backdrop-blur-xl border-b border-border bg-background/90">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 h-16">
-          <span className="text-xl font-extrabold tracking-tight" style={{ color: '#0F172A' }}>
+          <span className="text-xl font-extrabold tracking-tight text-foreground">
             THE LOCKER ROOM
           </span>
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-semibold" style={{ color: '#475569' }}>Features</a>
-            <a href="#coaches" className="text-sm font-semibold" style={{ color: '#475569' }}>For Coaches</a>
-            <a href="#about" className="text-sm font-semibold" style={{ color: '#475569' }}>About</a>
+            <a href="#features" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">Features</a>
+            <a href="#coaches" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">For Coaches</a>
+            <a href="#about" className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">About</a>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/auth">
-              <Button variant="ghost" className="text-sm font-semibold" style={{ color: '#475569' }}>
+              <Button variant="ghost" className="text-sm font-semibold text-muted-foreground">
                 Sign In
               </Button>
             </Link>
             <Link to="/auth">
-              <Button className="text-sm font-semibold min-h-[44px] px-5" style={{ background: '#D97706', color: '#0A0A0A' }}>
+              <Button className="text-sm font-semibold min-h-[44px] px-5">
                 Get Started
               </Button>
             </Link>
@@ -68,11 +68,8 @@ export default function Landing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <span
-              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium mb-6"
-              style={{ background: '#0F172A', color: '#F8FAFC' }}
-            >
-              <span className="w-2 h-2 rounded-full" style={{ background: '#D97706' }} />
+            <span className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium mb-6 bg-card text-foreground border border-border">
+              <span className="w-2 h-2 rounded-full bg-primary" />
               Basketball-first platform
             </span>
           </motion.div>
@@ -83,11 +80,11 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="text-4xl md:text-6xl leading-[1.1] mb-6"
           >
-            <span className="font-light" style={{ color: '#0F172A' }}>
+            <span className="font-light text-foreground">
               Build Your Athletic Profile,
             </span>
             <br />
-            <span className="font-extrabold" style={{ color: '#D97706' }}>
+            <span className="font-extrabold text-primary">
               Get Recruited.
             </span>
           </motion.h1>
@@ -96,8 +93,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-lg md:text-xl font-normal max-w-lg mx-auto mb-8"
-            style={{ color: '#475569' }}
+            className="text-lg md:text-xl font-normal max-w-lg mx-auto mb-8 text-muted-foreground"
           >
             The platform where athletes and coaches connect. Free. Built for basketball.
           </motion.p>
@@ -109,10 +105,7 @@ export default function Landing() {
             className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6"
           >
             <Link to="/auth">
-              <Button
-                className="text-base font-semibold min-h-[48px] px-7 gap-2"
-                style={{ background: '#D97706', color: '#0A0A0A' }}
-              >
+              <Button className="text-base font-semibold min-h-[48px] px-7 gap-2">
                 Create Your Profile
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -121,7 +114,6 @@ export default function Landing() {
               <Button
                 variant="outline"
                 className="text-base font-semibold min-h-[48px] px-7"
-                style={{ borderColor: '#CBD5E1', color: '#0F172A' }}
               >
                 See How It Works
               </Button>
@@ -132,8 +124,7 @@ export default function Landing() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="text-sm font-medium"
-            style={{ color: '#94A3B8' }}
+            className="text-sm font-medium text-muted-foreground"
           >
             Join 100+ athletes already on the platform
           </motion.p>
@@ -146,46 +137,40 @@ export default function Landing() {
           transition={{ duration: 0.7, delay: 0.4 }}
           className="max-w-4xl mx-auto px-4 pb-16"
         >
-          <div
-            className="rounded-2xl p-6 md:p-8"
-            style={{
-              background: '#0F172A',
-              boxShadow: '0 25px 60px -12px rgba(15,23,42,0.25)',
-            }}
-          >
+          <div className="rounded-2xl p-6 md:p-8 bg-card border border-border" style={{ boxShadow: '0 25px 60px -12px rgba(0,0,0,0.5)' }}>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-3 h-3 rounded-full" style={{ background: '#EF4444' }} />
-              <div className="w-3 h-3 rounded-full" style={{ background: '#F59E0B' }} />
-              <div className="w-3 h-3 rounded-full" style={{ background: '#22C55E' }} />
-              <span className="ml-3 text-xs font-medium" style={{ color: '#64748B' }}>thelockerroom.app/feed</span>
+              <div className="w-3 h-3 rounded-full bg-destructive" />
+              <div className="w-3 h-3 rounded-full bg-warning" />
+              <div className="w-3 h-3 rounded-full bg-success" />
+              <span className="ml-3 text-xs font-medium text-muted-foreground">thelockerroom.app/feed</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { name: 'Marcus Johnson', role: 'ATHLETE', sport: 'Basketball • PG', stat: '18.5 PPG', color: '#D97706' },
-                { name: 'Coach Williams', role: 'COACH', sport: 'Lincoln High School', stat: '12 Recruits', color: '#2563EB' },
-                { name: 'Sarah Martinez', role: 'ATHLETE', sport: 'Soccer • Forward', stat: '22 Goals', color: '#D97706' },
+                { name: 'Marcus Johnson', role: 'ATHLETE', sport: 'Basketball • PG', stat: '18.5 PPG', color: '#C2410C' },
+                { name: 'Coach Williams', role: 'COACH', sport: 'Lincoln High School', stat: '12 Recruits', color: '#1D4ED8' },
+                { name: 'Sarah Martinez', role: 'ATHLETE', sport: 'Soccer • Forward', stat: '22 Goals', color: '#C2410C' },
               ].map((card) => (
                 <div
                   key={card.name}
-                  className="rounded-xl p-4"
-                  style={{ background: '#1E293B', borderLeft: `3px solid ${card.color}` }}
+                  className="rounded-xl p-4 bg-secondary"
+                  style={{ borderLeft: `3px solid ${card.color}` }}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
-                      style={{ background: card.color, color: '#0A0A0A' }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                      style={{ background: card.color }}
                     >
                       {card.name.split(' ').map(n => n[0]).join('')}
                     </div>
                     <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded"
-                      style={{ background: card.color, color: card.color === '#2563EB' ? '#FFF' : '#0A0A0A' }}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded text-white"
+                      style={{ background: card.color }}
                     >
                       {card.role}
                     </span>
                   </div>
-                  <p className="text-sm font-bold" style={{ color: '#F8FAFC' }}>{card.name}</p>
-                  <p className="text-xs" style={{ color: '#94A3B8' }}>{card.sport}</p>
+                  <p className="text-sm font-bold text-foreground">{card.name}</p>
+                  <p className="text-xs text-muted-foreground">{card.sport}</p>
                   <p className="text-lg font-extrabold mt-2" style={{ color: card.color }}>{card.stat}</p>
                 </div>
               ))}
@@ -195,13 +180,13 @@ export default function Landing() {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-16 md:py-24" style={{ background: '#FFFFFF' }}>
+      <section id="features" className="py-16 md:py-24 bg-card">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: '#0F172A' }}>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-foreground">
               Everything you need
             </h2>
-            <p className="mt-3 text-base" style={{ color: '#64748B' }}>
+            <p className="mt-3 text-base text-muted-foreground">
               Built specifically for the sports community
             </p>
           </div>
@@ -217,19 +202,15 @@ export default function Landing() {
               <motion.div
                 key={f.title}
                 variants={item}
-                className="rounded-2xl p-6 text-center border"
-                style={{ background: '#F8FAFC', borderColor: '#E2E8F0' }}
+                className="rounded-2xl p-6 text-center border border-border bg-secondary"
               >
-                <div
-                  className="w-14 h-14 rounded-xl mx-auto mb-4 flex items-center justify-center"
-                  style={{ background: '#FEF3C7' }}
-                >
-                  <f.icon className="h-6 w-6" style={{ color: '#D97706' }} />
+                <div className="w-14 h-14 rounded-xl mx-auto mb-4 flex items-center justify-center bg-primary/10">
+                  <f.icon className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-lg font-bold mb-2" style={{ color: '#0F172A' }}>
+                <h3 className="text-lg font-bold mb-2 text-foreground">
                   {f.title}
                 </h3>
-                <p className="text-sm leading-relaxed" style={{ color: '#64748B' }}>
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   {f.desc}
                 </p>
               </motion.div>
@@ -239,7 +220,7 @@ export default function Landing() {
       </section>
 
       {/* Social Proof Stats */}
-      <section id="coaches" className="py-16 md:py-24" style={{ background: '#0F172A' }}>
+      <section id="coaches" className="py-16 md:py-24 bg-secondary">
         <div className="max-w-4xl mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -253,10 +234,10 @@ export default function Landing() {
               { value: 'Free', label: 'Forever' },
             ].map((s) => (
               <div key={s.label}>
-                <div className="text-3xl md:text-5xl font-extrabold mb-1" style={{ color: '#D97706' }}>
+                <div className="text-3xl md:text-5xl font-extrabold mb-1 text-primary">
                   {s.value}
                 </div>
-                <div className="text-sm font-medium" style={{ color: '#94A3B8' }}>
+                <div className="text-sm font-medium text-muted-foreground">
                   {s.label}
                 </div>
               </div>
@@ -266,26 +247,23 @@ export default function Landing() {
       </section>
 
       {/* Final CTA */}
-      <section id="about" className="py-16 md:py-24 text-center" style={{ background: '#F8FAFC' }}>
+      <section id="about" className="py-16 md:py-24 text-center bg-background">
         <div className="max-w-2xl mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl md:text-4xl font-extrabold mb-6" style={{ color: '#0F172A' }}>
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-6 text-foreground">
               Ready to get recruited?
             </h2>
             <Link to="/auth">
-              <Button
-                className="text-base font-semibold min-h-[48px] px-8 gap-2"
-                style={{ background: '#D97706', color: '#0A0A0A' }}
-              >
+              <Button className="text-base font-semibold min-h-[48px] px-8 gap-2">
                 Create Your Free Profile
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <p className="mt-4 text-sm" style={{ color: '#94A3B8' }}>
+            <p className="mt-4 text-sm text-muted-foreground">
               Takes 2 minutes. Free forever.
             </p>
           </motion.div>
@@ -293,22 +271,22 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-10 border-t" style={{ background: '#FFFFFF', borderColor: '#E2E8F0' }}>
+      <footer className="py-10 border-t border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-center md:text-left">
-            <span className="text-lg font-extrabold" style={{ color: '#0F172A' }}>
+            <span className="text-lg font-extrabold text-foreground">
               THE LOCKER ROOM
             </span>
-            <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>
+            <p className="text-sm mt-1 text-muted-foreground">
               Where athletes connect
             </p>
           </div>
-          <div className="flex items-center gap-6 text-sm font-medium" style={{ color: '#64748B' }}>
-            <a href="#about">About</a>
-            <a href="#features">Features</a>
-            <a href="mailto:hello@thelockerroom.app">Contact</a>
+          <div className="flex items-center gap-6 text-sm font-medium text-muted-foreground">
+            <a href="#about" className="hover:text-foreground transition-colors">About</a>
+            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
+            <a href="mailto:hello@thelockerroom.app" className="hover:text-foreground transition-colors">Contact</a>
           </div>
-          <p className="text-xs" style={{ color: '#94A3B8' }}>
+          <p className="text-xs text-muted-foreground">
             © 2025 The Locker Room
           </p>
         </div>
