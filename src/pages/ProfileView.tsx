@@ -1,14 +1,19 @@
-import { useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { allProfiles, getInitials, getTypeBadgeStyle, getTypeBorderColor } from '@/lib/mock-data';
 import { AthleteProfile, CoachProfile, RecruiterProfile } from '@/lib/types';
-import { CheckCircle, MapPin, Calendar, UserPlus, MessageSquare, Share2 } from 'lucide-react';
+import { CheckCircle, MapPin, Calendar, UserPlus, UserMinus, MessageSquare, Share2, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ProfileView() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const profile = allProfiles.find(p => p.id === id);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   if (!profile) {
     return (
@@ -26,22 +31,45 @@ export default function ProfileView() {
   const coach = isCoach ? (profile as CoachProfile) : null;
   const recruiter = isRecruiter ? (profile as RecruiterProfile) : null;
 
-  const borderColor = profile.type === 'athlete' ? '#D97706' : profile.type === 'coach' ? '#2563EB' : '#9333EA';
+  const borderColor = profile.type === 'athlete' ? 'hsl(var(--type-athlete))' : profile.type === 'coach' ? 'hsl(var(--type-coach))' : 'hsl(var(--type-recruiter))';
+
+  const toggleFollow = () => {
+    setIsFollowing(prev => !prev);
+    toast({
+      title: isFollowing ? 'Unfollowed' : 'Following!',
+      description: isFollowing ? `You unfollowed ${profile.name}` : `You are now following ${profile.name}`,
+    });
+  };
+
+  const handleMessage = () => {
+    navigate('/messages');
+  };
+
+  const handleShare = () => {
+    navigator.clipboard?.writeText(window.location.href);
+    toast({ title: 'Link copied!', description: 'Profile link copied to clipboard.' });
+  };
 
   return (
     <div className="min-h-screen pt-14 pb-20">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        {/* Cover photo with type-colored accent bar */}
+        {/* Back button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="fixed top-16 left-3 z-40 flex items-center justify-center h-9 w-9 rounded-full bg-background/80 backdrop-blur border border-border active:scale-[0.9] transition-transform"
+        >
+          <ArrowLeft className="h-4 w-4 text-foreground" />
+        </button>
+
+        {/* Cover */}
         <div className="w-full h-[160px] bg-gradient-primary relative">
           <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: borderColor }} />
-          {/* Avatar overlapping cover */}
           <div className="absolute -bottom-10 left-4 flex h-20 w-20 items-center justify-center rounded-full bg-card text-2xl font-bold text-foreground border-4 border-background" style={{ boxShadow: `0 0 0 2px ${borderColor}` }}>
             {getInitials(profile.name)}
           </div>
         </div>
 
         <div className="px-4 pt-14">
-          {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl">{profile.name}</h1>
             {profile.isVerified && <CheckCircle className="h-5 w-5 text-verified" />}
@@ -60,15 +88,25 @@ export default function ProfileView() {
           </div>
 
           <div className="flex gap-6 mt-3 text-sm">
-            <span><strong className="text-foreground text-lg">{profile.followers.toLocaleString()}</strong> <span className="text-muted-foreground">followers</span></span>
+            <span><strong className="text-foreground text-lg">{(profile.followers + (isFollowing ? 1 : 0)).toLocaleString()}</strong> <span className="text-muted-foreground">followers</span></span>
             <span><strong className="text-foreground text-lg">{profile.following.toLocaleString()}</strong> <span className="text-muted-foreground">following</span></span>
           </div>
 
           {/* Action buttons */}
           <div className="flex gap-3 mt-4">
-            <Button className="flex-1 bg-gradient-primary text-primary-foreground min-h-[44px] gap-2 active:opacity-90"><UserPlus className="h-4 w-4" />Follow</Button>
-            <Button variant="outline" className="flex-1 min-h-[44px] gap-2"><MessageSquare className="h-4 w-4" />Message</Button>
-            <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]"><Share2 className="h-4 w-4" /></Button>
+            <Button
+              onClick={toggleFollow}
+              className={`flex-1 min-h-[44px] gap-2 active:scale-[0.97] transition-transform ${isFollowing ? 'bg-secondary text-foreground hover:bg-secondary/80' : 'bg-gradient-primary text-primary-foreground'}`}
+            >
+              {isFollowing ? <UserMinus className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+              {isFollowing ? 'Unfollow' : 'Follow'}
+            </Button>
+            <Button variant="outline" className="flex-1 min-h-[44px] gap-2 active:scale-[0.97] transition-transform" onClick={handleMessage}>
+              <MessageSquare className="h-4 w-4" />Message
+            </Button>
+            <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] active:scale-[0.9] transition-transform" onClick={handleShare}>
+              <Share2 className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Bio */}
@@ -77,7 +115,6 @@ export default function ProfileView() {
             <p className="text-muted-foreground leading-relaxed text-sm">{profile.bio}</p>
           </div>
 
-          {/* Athlete Stats — 2 columns */}
           {athlete && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(profile.type)}`}>
               <div className="flex items-center justify-between mb-3">
@@ -95,7 +132,6 @@ export default function ProfileView() {
             </div>
           )}
 
-          {/* Coach details */}
           {coach && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(profile.type)}`}>
               <h2 className="text-lg mb-3">PROGRAM DETAILS</h2>
@@ -106,7 +142,6 @@ export default function ProfileView() {
             </div>
           )}
 
-          {/* Recruiter details */}
           {recruiter && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(profile.type)}`}>
               <h2 className="text-lg mb-3">CREDENTIALS</h2>
@@ -114,7 +149,6 @@ export default function ProfileView() {
             </div>
           )}
 
-          {/* Athlete school info */}
           {athlete && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(profile.type)}`}>
               <h2 className="text-lg mb-3">SCHOOL</h2>
