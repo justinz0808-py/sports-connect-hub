@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Search, PlusCircle, MessageSquare, User } from 'lucide-react';
 import CreatePostModal from '@/components/CreatePostModal';
 
@@ -13,6 +13,7 @@ const tabs = [
 
 export default function BottomTabBar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [postModalOpen, setPostModalOpen] = useState(false);
 
   return (
@@ -63,7 +64,11 @@ export default function BottomTabBar() {
           })}
         </div>
       </nav>
-      <CreatePostModal open={postModalOpen} onOpenChange={setPostModalOpen} />
+      <CreatePostModal
+        open={postModalOpen}
+        onOpenChange={setPostModalOpen}
+        onPostCreated={() => navigate('/feed')}
+      />
     </>
   );
 }

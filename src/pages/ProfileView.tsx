@@ -24,6 +24,8 @@ interface Profile {
   is_verified: boolean | null;
   followers_count: number | null;
   following_count: number | null;
+  avatar_url: string | null;
+  cover_url: string | null;
 }
 
 interface Post {
@@ -44,7 +46,11 @@ export default function ProfileView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -72,7 +78,28 @@ export default function ProfileView() {
       }
 
       setProfile(profileData);
-      setIsOwnProfile(user.id === targetId);
+      setCurrentUserId(user.id);
+      const ownProfile = user.id === targetId;
+      setIsOwnProfile(ownProfile);
+
+      // Real follower / following counts from follows table
+      const [{ count: fersCount }, { count: fingCount }] = await Promise.all([
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', targetId),
+        supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', targetId),
+      ]);
+      setFollowersCount(fersCount ?? 0);
+      setFollowingCount(fingCount ?? 0);
+
+      // Check if current user already follows this profile
+      if (!ownProfile) {
+        const { data: followData } = await supabase
+          .from('follows')
+          .select('id')
+          .eq('follower_id', user.id)
+          .eq('following_id', targetId)
+          .single();
+        setIsFollowing(!!followData);
+      }
 
       const { data: postsData } = await supabase
         .from('posts')
@@ -87,14 +114,33 @@ export default function ProfileView() {
     loadProfile();
   }, [profileId, navigate]);
 
-  const toggleFollow = () => {
-    setIsFollowing(prev => !prev);
+  const toggleFollow = async () => {
+    if (!currentUserId || !profile || isFollowLoading) return;
+    setIsFollowLoading(true);
+
+    const targetId = profile.id;
+    const nowFollowing = !isFollowing;
+
+    // Optimistic update
+    setIsFollowing(nowFollowing);
+    setFollowersCount(prev => prev + (nowFollowing ? 1 : -1));
+
+    if (nowFollowing) {
+      await supabase.from('follows').insert({ follower_id: currentUserId, following_id: targetId });
+    } else {
+      await supabase.from('follows').delete()
+        .eq('follower_id', currentUserId)
+        .eq('following_id', targetId);
+    }
+
     toast({
-      title: isFollowing ? 'Unfollowed' : 'Following!',
-      description: isFollowing
-        ? `You unfollowed ${profile?.full_name ?? 'this user'}`
-        : `You are now following ${profile?.full_name ?? 'this user'}`,
+      title: nowFollowing ? 'Following!' : 'Unfollowed',
+      description: nowFollowing
+        ? `You are now following ${profile.full_name ?? 'this user'}`
+        : `You unfollowed ${profile.full_name ?? 'this user'}`,
     });
+
+    setIsFollowLoading(false);
   };
 
   const handleShare = () => {
@@ -131,8 +177,6 @@ export default function ProfileView() {
       : 'hsl(var(--type-recruiter))';
 
   const displayName = profile.full_name ?? profile.username ?? 'Unknown';
-  const followers = (profile.followers_count ?? 0) + (isFollowing ? 1 : 0);
-  const following = profile.following_count ?? 0;
 
   const timeAgo = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -155,13 +199,22 @@ export default function ProfileView() {
         </button>
 
         {/* Cover */}
-        <div className="w-full h-[160px] bg-gradient-primary relative">
+        <div className="w-full h-[160px] relative overflow-hidden">
+          {profile.cover_url ? (
+            <img src={profile.cover_url} alt="Cover" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-primary" />
+          )}
           <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: borderColor }} />
           <div
-            className="absolute -bottom-10 left-4 flex h-20 w-20 items-center justify-center rounded-full bg-card text-2xl font-bold text-foreground border-4 border-background"
+            className="absolute -bottom-10 left-4 flex h-20 w-20 items-center justify-center rounded-full bg-card text-2xl font-bold text-foreground border-4 border-background overflow-hidden"
             style={{ boxShadow: `0 0 0 2px ${borderColor}` }}
           >
-            {getInitials(displayName)}
+            {profile.avatar_url ? (
+              <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+            ) : (
+              getInitials(displayName)
+            )}
           </div>
         </div>
 
@@ -205,11 +258,11 @@ export default function ProfileView() {
           {/* Follower counts */}
           <div className="flex gap-6 mt-3 text-sm">
             <span>
-              <strong className="text-foreground text-lg">{followers.toLocaleString()}</strong>{' '}
+              <strong className="text-foreground text-lg">{followersCount.toLocaleString()}</strong>{' '}
               <span className="text-muted-foreground">followers</span>
             </span>
             <span>
-              <strong className="text-foreground text-lg">{following.toLocaleString()}</strong>{' '}
+              <strong className="text-foreground text-lg">{followingCount.toLocaleString()}</strong>{' '}
               <span className="text-muted-foreground">following</span>
             </span>
           </div>
@@ -219,6 +272,7 @@ export default function ProfileView() {
             <div className="flex gap-3 mt-4">
               <Button
                 onClick={toggleFollow}
+                disabled={isFollowLoading}
                 className={`flex-1 min-h-[44px] gap-2 active:scale-[0.97] transition-transform ${
                   isFollowing
                     ? 'bg-secondary text-foreground hover:bg-secondary/80'
@@ -231,7 +285,7 @@ export default function ProfileView() {
               <Button
                 variant="outline"
                 className="flex-1 min-h-[44px] gap-2 active:scale-[0.97] transition-transform"
-                onClick={() => navigate('/messages')}
+                onClick={() => navigate('/messages', { state: { openConversationWith: profileId } })}
               >
                 <MessageSquare className="h-4 w-4" />Message
               </Button>

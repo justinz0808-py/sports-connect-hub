@@ -92,7 +92,6 @@ const Auth = () => {
         setIsLoading(false);
         return;
       }
-      toast({ title: "Account created!", description: "Let's set up your profile." });
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {

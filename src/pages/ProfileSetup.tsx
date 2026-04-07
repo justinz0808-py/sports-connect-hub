@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trophy, Loader2, CheckCircle2, ChevronRight, ChevronLeft } from "lucide-react";
+import { Trophy, Loader2, CheckCircle2, ChevronRight, ChevronLeft, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
@@ -59,6 +59,18 @@ const ProfileSetup = () => {
   const [weight, setWeight] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Avatar upload
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -108,6 +120,23 @@ const ProfileSetup = () => {
     if (!user) return;
     setIsSaving(true);
 
+    let avatar_url: string | undefined;
+
+    if (avatarFile) {
+      const ext = avatarFile.name.split(".").pop();
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("Avatar")
+        .upload(path, avatarFile, { upsert: true });
+
+      if (uploadError) {
+        toast({ title: "Avatar upload failed", description: uploadError.message, variant: "destructive" });
+        setIsSaving(false);
+        return;
+      }
+      avatar_url = supabase.storage.from("Avatar").getPublicUrl(path).data.publicUrl;
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update({
@@ -121,6 +150,7 @@ const ProfileSetup = () => {
         grad_year: gradYear ? parseInt(gradYear) : null,
         height,
         weight,
+        ...(avatar_url ? { avatar_url } : {}),
       })
       .eq("id", user.id);
 
@@ -204,6 +234,29 @@ const ProfileSetup = () => {
             </p>
 
             <div className="space-y-4">
+              {/* Avatar picker */}
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="relative w-20 h-20 rounded-full bg-secondary border-2 border-border flex items-center justify-center overflow-hidden active:scale-[0.97] transition-transform"
+                >
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <Camera className="w-7 h-7 text-muted-foreground" />
+                  )}
+                </button>
+                <p className="text-xs text-muted-foreground">Tap to add photo</p>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarSelect}
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-sm text-muted-foreground">Display Name</Label>
                 <Input
