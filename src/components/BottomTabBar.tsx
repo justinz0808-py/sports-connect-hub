@@ -1,36 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, PlusCircle, Bell, User } from 'lucide-react';
+import { Home, Search, PlusCircle, MessageSquare, User } from 'lucide-react';
 import CreatePostModal from '@/components/CreatePostModal';
-import { supabase } from '@/lib/supabase';
 
 const tabs = [
-  { label: 'HOME', href: '/feed', icon: Home },
-  { label: 'SEARCH', href: '/search', icon: Search },
-  { label: 'POST', href: '#post', icon: PlusCircle },
-  { label: 'NOTIFS', href: '/notifications', icon: Bell },
-  { label: 'PROFILE', href: '/profile', icon: User },
+  { label: 'HOME',     href: '/feed',     icon: Home },
+  { label: 'SEARCH',   href: '/search',   icon: Search },
+  { label: 'POST',     href: '#post',     icon: PlusCircle },
+  { label: 'MSGS',     href: '/messages', icon: MessageSquare },
+  { label: 'PROFILE',  href: '/profile',  icon: User },
 ];
 
 export default function BottomTabBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [postModalOpen, setPostModalOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    const fetchUnread = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { count } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .is('read_at', null);
-      setUnreadCount(count ?? 0);
-    };
-    fetchUnread();
-  }, [location.pathname]);
 
   return (
     <>
@@ -59,24 +43,16 @@ export default function BottomTabBar() {
               );
             }
 
-            const isNotifs = tab.href === '/notifications';
             return (
               <Link
                 key={tab.href}
                 to={tab.href}
                 className="flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-2 active:scale-[0.9] transition-transform"
               >
-                <div className="relative">
-                  <tab.icon
-                    className="h-5 w-5"
-                    style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
-                  />
-                  {isNotifs && unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[9px] font-bold text-primary-foreground flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </div>
+                <tab.icon
+                  className="h-5 w-5"
+                  style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
+                />
                 <span
                   className="text-[10px] font-semibold tracking-wide"
                   style={{ color: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))' }}
