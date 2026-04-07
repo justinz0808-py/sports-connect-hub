@@ -44,6 +44,7 @@ const Auth = () => {
 
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -116,6 +117,24 @@ const Auth = () => {
       toast({ title: "Google sign in failed", description: error.message, variant: "destructive" });
       setIsLoading(false);
     }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setErrors({ email: "Enter your email above first" });
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setIsLoading(false);
+    if (error) {
+      toast({ title: "Failed to send reset email", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Password reset email sent — check your inbox" });
+    setShowForgotPassword(false);
   };
 
   const toggleMode = () => {
@@ -196,6 +215,7 @@ const Auth = () => {
                 <button
                   type="button"
                   className="text-xs text-primary hover:underline"
+                  onClick={() => setShowForgotPassword((v) => !v)}
                 >
                   Forgot Password?
                 </button>
@@ -213,6 +233,24 @@ const Auth = () => {
               <p className="text-xs text-destructive">{errors.password}</p>
             )}
           </div>
+
+          {/* Forgot password inline form */}
+          {!isSignUp && showForgotPassword && (
+            <div className="rounded-lg border border-border bg-secondary p-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Enter your email above, then click Send Reset Link.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-9 text-sm"
+                disabled={isLoading}
+                onClick={handleForgotPassword}
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
+              </Button>
+            </div>
+          )}
 
           {/* Sign Up dropdowns */}
           {isSignUp && (
