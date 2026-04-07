@@ -1,15 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getInitials, getTypeBorderColor, getTypeBadgeStyle, timeAgo } from '@/lib/mock-data';
-import { Heart, MessageCircle, Share2, PenSquare, Loader2, Send, MoreHorizontal, Trash2, X } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Heart, MessageCircle, Share2, PenSquare, Loader2, Send, MoreHorizontal, Trash2, X, Plus, RefreshCw, Users } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import CreatePostModal from '@/components/CreatePostModal';
 
 const SPORT_FILTERS = ['All', 'Basketball', 'Football', 'Soccer', 'Baseball', 'Track & Field', 'Volleyball', 'Swimming', 'Tennis', 'Golf', 'Lacrosse', 'Wrestling', 'Other'];
+const PAGE_SIZE = 10;
 
 interface PostProfile {
   id: string;
@@ -26,10 +28,18 @@ interface Post {
   content: string;
   sport: string | null;
   image_url: string | null;
+  video_url: string | null;
   created_at: string;
   likes_count: number;
   comments_count: number;
   profiles: PostProfile | null;
+}
+
+interface StoryProfile {
+  id: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
 }
 
 interface CommentProfile {
@@ -67,10 +77,26 @@ function PostSkeleton() {
 export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
   const [activeSport, setActiveSport] = useState('All');
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [newPostsAvailable, setNewPostsAvailable] = useState(false);
+  const [pendingNewPosts, setPendingNewPosts] = useState<Post[]>([]);
+
+  // Pull-to-refresh
+  const [isPulling, setIsPulling] = useState(false);
+  const [pullY, setPullY] = useState(0);
+  const touchStartY = useRef(0);
+
+  // Infinite scroll sentinel
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Double-tap tracking
+  const lastTapRef = useRef<Record<string, number>>({});
 
   // Comments state
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
@@ -81,28 +107,44 @@ export default function Feed() {
   const [menuOpenPostId, setMenuOpenPostId] = useState<string | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
 
+  // Stories state
+  const navigate = useNavigate();
+  const [storyProfiles, setStoryProfiles] = useState<StoryProfile[]>([]);
+  const [currentUserProfile, setCurrentUserProfile] = useState<StoryProfile | null>(null);
+  const [viewedStories, setViewedStories] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('viewedStories') ?? '[]')); }
+    catch { return new Set(); }
+  });
+
   const { toast } = useToast();
 
-  const fetchPosts = useCallback(async () => {
+  // ── Fetch a page of posts ────────────────────────────────────────────
+  const fetchPostsPage = useCallback(async (pageIndex: number, replace: boolean) => {
     const { data } = await supabase
       .from('posts')
-      .select(`
-        *,
-        profiles (
-          id,
-          full_name,
-          username,
-          avatar_url,
-          user_type,
-          sport
-        )
-      `)
+      .select(`*, profiles(id, full_name, username, avatar_url, user_type, sport)`)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .range(pageIndex * PAGE_SIZE, pageIndex * PAGE_SIZE + PAGE_SIZE - 1);
 
-    setPosts((data as Post[]) ?? []);
+    const fetched = (data as Post[]) ?? [];
+    setHasMore(fetched.length === PAGE_SIZE);
+    if (replace) {
+      setPosts(fetched);
+    } else {
+      setPosts(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        return [...prev, ...fetched.filter(p => !existingIds.has(p.id))];
+      });
+    }
+    return fetched;
   }, []);
 
+  const fetchPosts = useCallback(async () => {
+    setPage(0);
+    await fetchPostsPage(0, true);
+  }, [fetchPostsPage]);
+
+  // ── Initial load ─────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
       setLoading(true);
@@ -111,23 +153,134 @@ export default function Feed() {
       if (user) {
         setCurrentUserId(user.id);
 
-        const { data: likes } = await supabase
-          .from('likes')
-          .select('post_id')
-          .eq('user_id', user.id);
+        const [likesRes, profileRes, followsRes] = await Promise.all([
+          supabase.from('likes').select('post_id').eq('user_id', user.id),
+          supabase.from('profiles').select('id, full_name, username, avatar_url').eq('id', user.id).single(),
+          supabase.from('follows').select('following_id').eq('follower_id', user.id),
+        ]);
 
-        if (likes) {
-          setLikedPosts(new Set(likes.map((l: { post_id: string }) => l.post_id)));
+        if (likesRes.data) {
+          setLikedPosts(new Set(likesRes.data.map((l: { post_id: string }) => l.post_id)));
+        }
+        if (profileRes.data) setCurrentUserProfile(profileRes.data as StoryProfile);
+
+        const followingIds = (followsRes.data ?? []).map((f: { following_id: string }) => f.following_id);
+        if (followingIds.length > 0) {
+          const { data: storyData } = await supabase
+            .from('profiles')
+            .select('id, full_name, username, avatar_url')
+            .in('id', followingIds)
+            .limit(20);
+          setStoryProfiles((storyData ?? []) as StoryProfile[]);
         }
       }
 
-      await fetchPosts();
+      await fetchPostsPage(0, true);
       setLoading(false);
     };
 
     init();
-  }, [fetchPosts]);
+  }, [fetchPostsPage]);
 
+  // ── Realtime: new posts ──────────────────────────────────────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel('feed-posts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        async (payload) => {
+          // Skip own posts — they're added immediately via fetchPosts after modal
+          if (payload.new.user_id === currentUserId) return;
+
+          // Fetch full post with profile join
+          const { data } = await supabase
+            .from('posts')
+            .select(`*, profiles(id, full_name, username, avatar_url, user_type, sport)`)
+            .eq('id', payload.new.id)
+            .single();
+
+          if (data) {
+            setPendingNewPosts(prev => [data as Post, ...prev]);
+            setNewPostsAvailable(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUserId]);
+
+  // ── Infinite scroll ──────────────────────────────────────────────────
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      async (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          setLoadingMore(true);
+          const nextPage = page + 1;
+          setPage(nextPage);
+          await fetchPostsPage(nextPage, false);
+          setLoadingMore(false);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, page, fetchPostsPage]);
+
+  // ── Pull-to-refresh ──────────────────────────────────────────────────
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (window.scrollY > 0) return;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (dy > 0) setPullY(Math.min(dy * 0.4, 70));
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullY > 50) {
+      setIsPulling(true);
+      setPullY(0);
+      await fetchPosts();
+      setIsPulling(false);
+    } else {
+      setPullY(0);
+    }
+  };
+
+  // ── Show pending realtime posts ──────────────────────────────────────
+  const showNewPosts = () => {
+    setPosts(prev => {
+      const existingIds = new Set(prev.map(p => p.id));
+      return [...pendingNewPosts.filter(p => !existingIds.has(p.id)), ...prev];
+    });
+    setPendingNewPosts([]);
+    setNewPostsAvailable(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ── Double-tap to like ───────────────────────────────────────────────
+  const handlePostTap = (postId: string) => {
+    const now = Date.now();
+    const last = lastTapRef.current[postId] ?? 0;
+    if (now - last < 350) {
+      if (!likedPosts.has(postId)) toggleLike(postId);
+      lastTapRef.current[postId] = 0;
+    } else {
+      lastTapRef.current[postId] = now;
+    }
+  };
+
+  // ── Like ─────────────────────────────────────────────────────────────
   const toggleLike = async (postId: string) => {
     if (!currentUserId) return;
 
@@ -135,72 +288,48 @@ export default function Feed() {
     const currentPost = posts.find(p => p.id === postId);
     const newCount = Math.max(0, (currentPost?.likes_count ?? 0) + (isLiked ? -1 : 1));
 
-    // Await both DB ops before updating local state so the count is persisted
-    // NOTE: if likes_count doesn't persist, run this SQL in Supabase:
-    // CREATE POLICY "Users can update post counts"
-    // ON posts FOR UPDATE
-    // USING (true)
-    // WITH CHECK (true);
-    if (isLiked) {
-      await supabase.from('likes').delete().eq('user_id', currentUserId).eq('post_id', postId);
-    } else {
-      await supabase.from('likes').insert({ user_id: currentUserId, post_id: postId });
-    }
-    const { error: likeUpdateError } = await supabase
-      .from('posts')
-      .update({ likes_count: newCount })
-      .eq('id', postId);
-    console.log('like update error:', likeUpdateError);
-
-    // Refetch the post to sync true count from DB
-    const { data: refreshed } = await supabase
-      .from('posts')
-      .select('likes_count, comments_count')
-      .eq('id', postId)
-      .single();
-
-    // Update local state with confirmed DB values
+    // Optimistic update immediately
     setLikedPosts(prev => {
       const next = new Set(prev);
       isLiked ? next.delete(postId) : next.add(postId);
       return next;
     });
-    setPosts(prev =>
-      prev.map(p => p.id === postId
-        ? { ...p, likes_count: refreshed?.likes_count ?? newCount, comments_count: refreshed?.comments_count ?? p.comments_count }
-        : p
-      )
-    );
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes_count: newCount } : p));
+
+    if (isLiked) {
+      await supabase.from('likes').delete().eq('user_id', currentUserId).eq('post_id', postId);
+    } else {
+      await supabase.from('likes').insert({ user_id: currentUserId, post_id: postId });
+      if (currentPost && currentPost.user_id !== currentUserId) {
+        supabase.from('notifications').insert({
+          user_id: currentPost.user_id,
+          actor_id: currentUserId,
+          type: 'like',
+          post_id: postId,
+        });
+      }
+    }
+    await supabase.from('posts').update({ likes_count: newCount }).eq('id', postId);
   };
 
+  // ── Comments ─────────────────────────────────────────────────────────
   const toggleComments = async (postId: string) => {
     const isExpanded = expandedComments.has(postId);
-
     setExpandedComments(prev => {
       const next = new Set(prev);
       isExpanded ? next.delete(postId) : next.add(postId);
       return next;
     });
 
-    // Only fetch if expanding and not yet loaded
     if (!isExpanded && !comments[postId]) {
       setCommentLoading(prev => new Set(prev).add(postId));
-
       const { data } = await supabase
         .from('comments')
-        .select(`
-          *,
-          profiles (id, full_name, username, avatar_url)
-        `)
+        .select(`*, profiles(id, full_name, username, avatar_url)`)
         .eq('post_id', postId)
         .order('created_at', { ascending: true });
-
       setComments(prev => ({ ...prev, [postId]: (data as Comment[]) ?? [] }));
-      setCommentLoading(prev => {
-        const next = new Set(prev);
-        next.delete(postId);
-        return next;
-      });
+      setCommentLoading(prev => { const next = new Set(prev); next.delete(postId); return next; });
     }
   };
 
@@ -211,76 +340,41 @@ export default function Feed() {
     setCommentSubmitting(prev => new Set(prev).add(postId));
     setCommentInputs(prev => ({ ...prev, [postId]: '' }));
 
-    // Capture count before optimistic update
     const currentPost = posts.find(p => p.id === postId);
     const newCount = (currentPost?.comments_count ?? 0) + 1;
-
-    // Optimistic comment count increment
-    setPosts(prev =>
-      prev.map(p => p.id === postId ? { ...p, comments_count: newCount } : p)
-    );
+    setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: newCount } : p));
 
     const { data, error } = await supabase
       .from('comments')
       .insert({ user_id: currentUserId, post_id: postId, content })
-      .select(`*, profiles (id, full_name, username, avatar_url)`)
+      .select(`*, profiles(id, full_name, username, avatar_url)`)
       .single();
 
     if (!error && data) {
-      setComments(prev => ({
-        ...prev,
-        [postId]: [...(prev[postId] ?? []), data as Comment],
-      }));
-      // Persist count to DB so it survives refresh
-      // NOTE: if comments_count doesn't persist, run this SQL in Supabase:
-      // CREATE POLICY "Users can update post counts"
-      // ON posts FOR UPDATE
-      // USING (true)
-      // WITH CHECK (true);
-      const { error: commentUpdateError } = await supabase
-        .from('posts')
-        .update({ comments_count: newCount })
-        .eq('id', postId);
-      console.log('comment count update error:', commentUpdateError);
-
-      // Refetch the post to sync true count from DB
-      const { data: refreshed } = await supabase
-        .from('posts')
-        .select('likes_count, comments_count')
-        .eq('id', postId)
-        .single();
-      if (refreshed) {
-        setPosts(prev =>
-          prev.map(p => p.id === postId
-            ? { ...p, likes_count: refreshed.likes_count, comments_count: refreshed.comments_count }
-            : p
-          )
-        );
+      setComments(prev => ({ ...prev, [postId]: [...(prev[postId] ?? []), data as Comment] }));
+      if (currentPost && currentPost.user_id !== currentUserId) {
+        supabase.from('notifications').insert({
+          user_id: currentPost.user_id,
+          actor_id: currentUserId,
+          type: 'comment',
+          post_id: postId,
+        });
       }
+      await supabase.from('posts').update({ comments_count: newCount }).eq('id', postId);
     } else if (error) {
-      // Revert optimistic update on failure
-      setPosts(prev =>
-        prev.map(p => p.id === postId ? { ...p, comments_count: newCount - 1 } : p)
-      );
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments_count: newCount - 1 } : p));
     }
 
-    setCommentSubmitting(prev => {
-      const next = new Set(prev);
-      next.delete(postId);
-      return next;
-    });
+    setCommentSubmitting(prev => { const next = new Set(prev); next.delete(postId); return next; });
   };
 
+  // ── Delete ────────────────────────────────────────────────────────────
   const deletePost = async (postId: string) => {
-    // Optimistic removal from local state
     setPosts(prev => prev.filter(p => p.id !== postId));
     setMenuOpenPostId(null);
-
-    // Delete dependents first, then the post
     await supabase.from('comments').delete().eq('post_id', postId);
     await supabase.from('likes').delete().eq('post_id', postId);
     await supabase.from('posts').delete().eq('id', postId);
-
     toast({ title: 'Post deleted' });
   };
 
@@ -294,9 +388,112 @@ export default function Feed() {
     : posts.filter(p => p.sport?.toLowerCase() === activeSport.toLowerCase());
 
   return (
-    <div className="min-h-screen pt-14 pb-20">
+    <div
+      className="min-h-screen pt-14 pb-20"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Pull-to-refresh indicator */}
+      <AnimatePresence>
+        {(pullY > 0 || isPulling) && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: isPulling ? 48 : pullY, opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="flex items-center justify-center overflow-hidden"
+          >
+            <RefreshCw className={`h-5 w-5 text-primary ${isPulling ? 'animate-spin' : ''}`} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="px-4 pt-4">
         <h1 className="text-2xl mb-4">FEED</h1>
+
+        {/* "New posts" pill */}
+        <AnimatePresence>
+          {newPostsAvailable && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex justify-center mb-3"
+            >
+              <button
+                onClick={showNewPosts}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-lg active:scale-[0.96] transition-transform"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                New posts — tap to load
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Stories bar */}
+        {(currentUserProfile || storyProfiles.length > 0) && (
+          <div className="flex gap-3 overflow-x-auto pb-3 mb-4 scrollbar-none -mx-4 px-4">
+            {currentUserProfile && (
+              <button
+                onClick={() => setModalOpen(true)}
+                className="flex flex-col items-center gap-1 shrink-0"
+              >
+                <div className="relative h-14 w-14">
+                  <div className="h-14 w-14 rounded-full overflow-hidden border-2 border-border">
+                    {currentUserProfile.avatar_url ? (
+                      <img src={currentUserProfile.avatar_url} alt="You" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
+                        {getInitials(currentUserProfile.full_name ?? currentUserProfile.username ?? 'Me')}
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute bottom-0 right-0 h-5 w-5 rounded-full bg-primary border-2 border-background flex items-center justify-center">
+                    <Plus className="h-3 w-3 text-primary-foreground" />
+                  </div>
+                </div>
+                <span className="text-[10px] text-muted-foreground w-14 truncate text-center">You</span>
+              </button>
+            )}
+
+            {storyProfiles.map(p => {
+              const isViewed = viewedStories.has(p.id);
+              const name = p.full_name ?? p.username ?? 'User';
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    if (!isViewed) {
+                      const next = new Set(viewedStories);
+                      next.add(p.id);
+                      setViewedStories(next);
+                      localStorage.setItem('viewedStories', JSON.stringify([...next]));
+                    }
+                    navigate(`/profile/${p.id}`);
+                  }}
+                  className="flex flex-col items-center gap-1 shrink-0"
+                >
+                  <div
+                    className="h-14 w-14 rounded-full p-[2px]"
+                    style={{ background: isViewed ? 'hsl(var(--border))' : 'linear-gradient(135deg, hsl(var(--primary)), #fb923c)' }}
+                  >
+                    <div className="h-full w-full rounded-full overflow-hidden border-2 border-background">
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} alt={name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full bg-secondary flex items-center justify-center text-xs font-bold text-foreground">
+                          {getInitials(name)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground w-14 truncate text-center">{name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Sport filter pills */}
         <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none -mx-4 px-4">
@@ -323,18 +520,29 @@ export default function Feed() {
         {/* Empty state */}
         {!loading && filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-            <p className="text-muted-foreground">
-              {activeSport === 'All'
-                ? 'No posts yet. Be the first to post!'
-                : `No ${activeSport} posts yet.`}
-            </p>
-            {activeSport === 'All' && (
-              <Button
-                className="gap-2 bg-gradient-primary text-primary-foreground"
-                onClick={() => setModalOpen(true)}
-              >
-                <PenSquare className="h-4 w-4" /> Create Post
-              </Button>
+            {activeSport === 'All' ? (
+              <>
+                <Users className="h-14 w-14 text-muted-foreground/20" />
+                <p className="text-muted-foreground font-medium">Nothing here yet</p>
+                <p className="text-sm text-muted-foreground/70">Follow athletes to see their posts here, or be the first to post.</p>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => navigate('/search')}
+                  >
+                    Find athletes
+                  </Button>
+                  <Button
+                    className="gap-2 bg-gradient-primary text-primary-foreground"
+                    onClick={() => setModalOpen(true)}
+                  >
+                    <PenSquare className="h-4 w-4" /> Create Post
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground">No {activeSport} posts yet.</p>
             )}
           </div>
         )}
@@ -348,7 +556,6 @@ export default function Feed() {
               const displayName = profile?.full_name ?? profile?.username ?? 'Unknown';
               const isLiked = likedPosts.has(post.id);
               const isCommentsOpen = expandedComments.has(post.id);
-
               const isOwnPost = post.user_id === currentUserId;
               const isMenuOpen = menuOpenPostId === post.id;
 
@@ -357,10 +564,11 @@ export default function Feed() {
                   key={post.id}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
+                  transition={{ delay: Math.min(i, 5) * 0.05 }}
                   className={`glass-card p-4 rounded-xl border-l-4 ${getTypeBorderColor(userType)} relative`}
+                  onTouchEnd={() => handlePostTap(post.id)}
                 >
-                  {/* Top-right: badge + optional three-dot menu */}
+                  {/* Top-right: badge + three-dot menu */}
                   <div className="absolute top-2 right-2 flex items-center gap-1">
                     {isOwnPost && (
                       <div className="relative">
@@ -370,29 +578,21 @@ export default function Feed() {
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
-
-                        {/* Dropdown menu */}
                         {isMenuOpen && (
                           <>
-                            {/* Backdrop to close on outside click */}
-                            <div
-                              className="fixed inset-0 z-40"
-                              onClick={() => setMenuOpenPostId(null)}
-                            />
+                            <div className="fixed inset-0 z-40" onClick={() => setMenuOpenPostId(null)} />
                             <div className="absolute right-0 top-8 z-50 w-44 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
                               <button
                                 onClick={() => deletePost(post.id)}
                                 className="flex w-full items-center gap-2.5 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors"
                               >
-                                <Trash2 className="h-4 w-4" />
-                                Delete Post
+                                <Trash2 className="h-4 w-4" />Delete Post
                               </button>
                               <button
                                 onClick={() => setMenuOpenPostId(null)}
                                 className="flex w-full items-center gap-2.5 px-4 py-3 text-sm text-muted-foreground hover:bg-secondary transition-colors border-t border-border"
                               >
-                                <X className="h-4 w-4" />
-                                Cancel
+                                <X className="h-4 w-4" />Cancel
                               </button>
                             </div>
                           </>
@@ -406,11 +606,7 @@ export default function Feed() {
 
                   <div className="flex items-start gap-3">
                     {profile?.avatar_url ? (
-                      <img
-                        src={profile.avatar_url}
-                        alt={displayName}
-                        className="h-10 w-10 shrink-0 rounded-full object-cover"
-                      />
+                      <img src={profile.avatar_url} alt={displayName} className="h-10 w-10 shrink-0 rounded-full object-cover" />
                     ) : (
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-sm font-bold text-primary-foreground">
                         {getInitials(displayName)}
@@ -428,13 +624,20 @@ export default function Feed() {
                       </div>
                       <p className="mt-3 text-sm leading-relaxed">{post.content}</p>
 
-                      {/* Post image */}
                       {post.image_url && (
                         <img
                           src={post.image_url}
-                          alt="Post image"
-                          onClick={() => setViewingImage(post.image_url)}
+                          alt="Post"
+                          onClick={() => setViewingImage(post.image_url!)}
                           className="mt-3 rounded-lg w-full max-h-80 object-cover cursor-pointer"
+                        />
+                      )}
+                      {post.video_url && (
+                        <video
+                          src={post.video_url}
+                          controls
+                          playsInline
+                          className="mt-3 rounded-lg w-full max-h-80 bg-black"
                         />
                       )}
 
@@ -504,8 +707,7 @@ export default function Feed() {
                                 >
                                   {commentSubmitting.has(post.id)
                                     ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <Send className="h-3 w-3" />
-                                  }
+                                    : <Send className="h-3 w-3" />}
                                 </Button>
                               </div>
                             </>
@@ -517,6 +719,17 @@ export default function Feed() {
                 </motion.div>
               );
             })}
+
+            {/* Infinite scroll sentinel */}
+            <div ref={sentinelRef} className="h-4" />
+            {loadingMore && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!hasMore && filtered.length > 0 && (
+              <p className="text-center text-xs text-muted-foreground py-4">You're all caught up!</p>
+            )}
           </div>
         )}
       </div>
@@ -543,10 +756,7 @@ export default function Feed() {
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
           onClick={() => setViewingImage(null)}
         >
-          <img
-            src={viewingImage}
-            className="max-w-full max-h-full object-contain"
-          />
+          <img src={viewingImage} className="max-w-full max-h-full object-contain" />
           <button
             className="absolute top-4 right-4 text-white text-3xl font-bold"
             onClick={() => setViewingImage(null)}

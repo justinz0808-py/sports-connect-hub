@@ -118,6 +118,7 @@ const ProfileSetup = () => {
 
   const handleSave = async () => {
     if (!user) return;
+    if (!validateStep2()) return;
     setIsSaving(true);
 
     let avatar_url: string | undefined;

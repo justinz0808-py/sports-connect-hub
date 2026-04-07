@@ -10,6 +10,7 @@ import Feed from "@/pages/Feed";
 import SearchPage from "@/pages/SearchPage";
 import ProfileView from "@/pages/ProfileView";
 import Messages from "@/pages/Messages";
+import Notifications from "@/pages/Notifications";
 import Auth from "@/pages/Auth";
 import ProfileSetup from "@/pages/ProfileSetup";
 import NotFound from "./pages/NotFound";
@@ -25,6 +26,7 @@ const AppLayout = () => (
       <Route path="/profile" element={<ProfileView />} />
       <Route path="/profile/:id" element={<ProfileView />} />
       <Route path="/messages" element={<Messages />} />
+      <Route path="/notifications" element={<Notifications />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
     <BottomTabBar />

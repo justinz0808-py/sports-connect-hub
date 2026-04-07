@@ -96,6 +96,14 @@ export default function PostDetailModal({ post, open, onClose, currentUserId }: 
 
     if (nowLiked) {
       await supabase.from('likes').insert({ user_id: currentUserId, post_id: post.id });
+      if (post.user_id !== currentUserId) {
+        supabase.from('notifications').insert({
+          user_id: post.user_id,
+          actor_id: currentUserId,
+          type: 'like',
+          post_id: post.id,
+        });
+      }
     } else {
       await supabase.from('likes').delete().eq('user_id', currentUserId).eq('post_id', post.id);
     }
@@ -117,6 +125,14 @@ export default function PostDetailModal({ post, open, onClose, currentUserId }: 
     if (!error && data) {
       setComments(prev => [...prev, data as Comment]);
       await supabase.from('posts').update({ comments_count: (post.comments_count ?? 0) + 1 }).eq('id', post.id);
+      if (post.user_id !== currentUserId) {
+        supabase.from('notifications').insert({
+          user_id: post.user_id,
+          actor_id: currentUserId,
+          type: 'comment',
+          post_id: post.id,
+        });
+      }
     }
     setIsSubmitting(false);
   };

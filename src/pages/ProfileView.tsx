@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getInitials, getTypeBadgeStyle, getTypeBorderColor } from '@/lib/mock-data';
-import { CheckCircle, MapPin, Calendar, UserPlus, UserMinus, MessageSquare, Share2, ArrowLeft, Loader2 } from 'lucide-react';
+import {
+  CheckCircle, MapPin, Calendar, UserPlus, UserMinus,
+  MessageSquare, Share2, ArrowLeft, Loader2, Camera, Film, FileText,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
+import PostDetailModal, { PostForModal } from '@/components/PostDetailModal';
 
 interface Profile {
   id: string;
@@ -28,21 +31,58 @@ interface Profile {
   cover_url: string | null;
 }
 
-interface Post {
+interface GridPost {
   id: string;
+  user_id: string;
   content: string;
+  sport: string | null;
+  image_url: string | null;
+  video_url: string | null;
   created_at: string;
-  likes_count: number | null;
-  comments_count: number | null;
+  likes_count: number;
+  comments_count: number;
+  profiles: {
+    id: string;
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+    user_type: string | null;
+  } | null;
+}
+
+function ProfileSkeleton() {
+  return (
+    <div className="min-h-screen pt-14 pb-20 animate-pulse">
+      <div className="w-full h-[160px] bg-secondary" />
+      <div className="px-4 pt-14 space-y-3">
+        <div className="h-7 bg-secondary rounded w-1/2" />
+        <div className="h-4 bg-secondary rounded w-1/3" />
+        <div className="flex gap-6 mt-3">
+          <div className="h-5 bg-secondary rounded w-16" />
+          <div className="h-5 bg-secondary rounded w-16" />
+          <div className="h-5 bg-secondary rounded w-12" />
+        </div>
+        <div className="h-10 bg-secondary rounded mt-4" />
+        <div className="h-24 bg-secondary rounded mt-4" />
+        <div className="grid grid-cols-3 gap-0.5 mt-4">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="aspect-square bg-secondary" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ProfileView() {
   const { id: profileId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [posts, setPosts] = useState<GridPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -51,17 +91,18 @@ export default function ProfileView() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isCoverUploading, setIsCoverUploading] = useState(false);
+
+  // Post modal
+  const [selectedPost, setSelectedPost] = useState<PostForModal | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
       setLoading(true);
 
       const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        navigate('/auth');
-        return;
-      }
+      if (!user) { navigate('/auth'); return; }
 
       const targetId = profileId ?? user.id;
 
@@ -78,19 +119,29 @@ export default function ProfileView() {
       }
 
       setProfile(profileData);
+      setCoverUrl(profileData.cover_url ?? null);
       setCurrentUserId(user.id);
       const ownProfile = user.id === targetId;
       setIsOwnProfile(ownProfile);
 
-      // Real follower / following counts from follows table
-      const [{ count: fersCount }, { count: fingCount }] = await Promise.all([
+      const [
+        { count: fersCount },
+        { count: fingCount },
+        { data: postsData },
+      ] = await Promise.all([
         supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', targetId),
         supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', targetId),
+        supabase
+          .from('posts')
+          .select('id, user_id, content, sport, image_url, video_url, created_at, likes_count, comments_count, profiles(id, full_name, username, avatar_url, user_type)')
+          .eq('user_id', targetId)
+          .order('created_at', { ascending: false }),
       ]);
+
       setFollowersCount(fersCount ?? 0);
       setFollowingCount(fingCount ?? 0);
+      setPosts((postsData as unknown as GridPost[]) ?? []);
 
-      // Check if current user already follows this profile
       if (!ownProfile) {
         const { data: followData } = await supabase
           .from('follows')
@@ -101,13 +152,6 @@ export default function ProfileView() {
         setIsFollowing(!!followData);
       }
 
-      const { data: postsData } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', targetId)
-        .order('created_at', { ascending: false });
-
-      setPosts(postsData ?? []);
       setLoading(false);
     };
 
@@ -121,12 +165,17 @@ export default function ProfileView() {
     const targetId = profile.id;
     const nowFollowing = !isFollowing;
 
-    // Optimistic update
     setIsFollowing(nowFollowing);
     setFollowersCount(prev => prev + (nowFollowing ? 1 : -1));
 
     if (nowFollowing) {
       await supabase.from('follows').insert({ follower_id: currentUserId, following_id: targetId });
+      supabase.from('notifications').insert({
+        user_id: targetId,
+        actor_id: currentUserId,
+        type: 'follow',
+        post_id: null,
+      });
     } else {
       await supabase.from('follows').delete()
         .eq('follower_id', currentUserId)
@@ -148,13 +197,44 @@ export default function ProfileView() {
     toast({ title: 'Link copied!', description: 'Profile link copied to clipboard.' });
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen pt-14 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUserId) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Image too large', description: 'Please choose an image under 5MB.', variant: 'destructive' });
+      return;
+    }
+
+    setIsCoverUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `cover_${currentUserId}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('Avatar')
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      toast({ title: 'Upload failed', description: uploadError.message, variant: 'destructive' });
+      setIsCoverUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('Avatar').getPublicUrl(path);
+
+    await supabase.from('profiles').update({ cover_url: publicUrl }).eq('id', currentUserId);
+    setCoverUrl(publicUrl);
+    toast({ title: 'Cover photo updated!' });
+    setIsCoverUploading(false);
+    if (coverInputRef.current) coverInputRef.current.value = '';
+  };
+
+  const openPost = (post: GridPost) => {
+    setSelectedPost(post as PostForModal);
+    setModalOpen(true);
+  };
+
+  if (loading) return <ProfileSkeleton />;
 
   if (error || !profile) {
     return (
@@ -178,18 +258,10 @@ export default function ProfileView() {
 
   const displayName = profile.full_name ?? profile.username ?? 'Unknown';
 
-  const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  };
-
   return (
     <div className="min-h-screen pt-14 pb-20">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
@@ -198,14 +270,40 @@ export default function ProfileView() {
           <ArrowLeft className="h-4 w-4 text-foreground" />
         </button>
 
-        {/* Cover */}
-        <div className="w-full h-[160px] relative overflow-hidden">
-          {profile.cover_url ? (
-            <img src={profile.cover_url} alt="Cover" className="w-full h-full object-cover" />
+        {/* Cover photo */}
+        <div className="w-full h-[160px] relative overflow-visible">
+          {coverUrl ? (
+            <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-primary" />
           )}
           <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: borderColor }} />
+
+          {/* Cover upload button — own profile only */}
+          {isOwnProfile && (
+            <>
+              <button
+                onClick={() => coverInputRef.current?.click()}
+                disabled={isCoverUploading}
+                className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/70 backdrop-blur border border-border text-xs text-foreground active:scale-[0.95] transition-transform"
+              >
+                {isCoverUploading
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Camera className="h-3.5 w-3.5" />
+                }
+                {isCoverUploading ? 'Uploading…' : 'Edit cover'}
+              </button>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverUpload}
+              />
+            </>
+          )}
+
+          {/* Avatar */}
           <div
             className="absolute -bottom-10 left-4 flex h-20 w-20 items-center justify-center rounded-full bg-card text-2xl font-bold text-foreground border-4 border-background overflow-hidden"
             style={{ boxShadow: `0 0 0 2px ${borderColor}` }}
@@ -234,12 +332,8 @@ export default function ProfileView() {
               {[profile.position, profile.sport].filter(Boolean).join(' · ')}
             </p>
           )}
-          {isCoach && (
-            <p className="text-type-coach font-semibold mt-1 text-sm">Coach</p>
-          )}
-          {userType === 'recruiter' && (
-            <p className="text-type-recruiter font-semibold mt-1 text-sm">Recruiter</p>
-          )}
+          {isCoach && <p className="text-type-coach font-semibold mt-1 text-sm">Coach</p>}
+          {userType === 'recruiter' && <p className="text-type-recruiter font-semibold mt-1 text-sm">Recruiter</p>}
 
           {/* Meta */}
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
@@ -255,16 +349,20 @@ export default function ProfileView() {
             )}
           </div>
 
-          {/* Follower counts */}
+          {/* Stats row: Posts · Followers · Following */}
           <div className="flex gap-6 mt-3 text-sm">
-            <span>
-              <strong className="text-foreground text-lg">{followersCount.toLocaleString()}</strong>{' '}
-              <span className="text-muted-foreground">followers</span>
-            </span>
-            <span>
-              <strong className="text-foreground text-lg">{followingCount.toLocaleString()}</strong>{' '}
-              <span className="text-muted-foreground">following</span>
-            </span>
+            <div className="text-center">
+              <div className="text-lg font-bold text-foreground">{posts.length}</div>
+              <div className="text-[11px] text-muted-foreground">posts</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-foreground">{followersCount.toLocaleString()}</div>
+              <div className="text-[11px] text-muted-foreground">followers</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-foreground">{followingCount.toLocaleString()}</div>
+              <div className="text-[11px] text-muted-foreground">following</div>
+            </div>
           </div>
 
           {/* Action buttons */}
@@ -359,30 +457,66 @@ export default function ProfileView() {
               )}
             </div>
           )}
-
-          {/* Posts */}
-          {posts.length > 0 && (
-            <div className="mt-4">
-              <h2 className="text-lg mb-3">POSTS</h2>
-              <div className="space-y-3">
-                {posts.map((post) => (
-                  <div
-                    key={post.id}
-                    className={`glass-card p-4 rounded-xl border-l-4 ${getTypeBorderColor(userType)}`}
-                  >
-                    <p className="text-sm text-foreground leading-relaxed">{post.content}</p>
-                    <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                      <span>{timeAgo(post.created_at)}</span>
-                      {post.likes_count != null && <span>{post.likes_count} likes</span>}
-                      {post.comments_count != null && <span>{post.comments_count} comments</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Posts grid — full-width, no side padding */}
+        {posts.length > 0 && (
+          <div className="mt-4">
+            <h2 className="text-lg px-4 mb-2">POSTS</h2>
+            <div className="grid grid-cols-3 gap-0.5">
+              {posts.map(post => (
+                <button
+                  key={post.id}
+                  onClick={() => openPost(post)}
+                  className="aspect-square relative overflow-hidden bg-secondary active:opacity-80 transition-opacity"
+                >
+                  {post.image_url ? (
+                    <img
+                      src={post.image_url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : post.video_url ? (
+                    <>
+                      <video
+                        src={post.video_url}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                      {/* Video badge */}
+                      <div className="absolute top-1.5 right-1.5 bg-black/60 rounded p-0.5">
+                        <Film className="h-3 w-3 text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2 bg-card">
+                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <p className="text-[10px] text-muted-foreground text-center leading-tight line-clamp-4">
+                        {post.content}
+                      </p>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {posts.length === 0 && !loading && (
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <p className="text-muted-foreground text-sm">No posts yet.</p>
+          </div>
+        )}
       </motion.div>
+
+      <PostDetailModal
+        post={selectedPost}
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setSelectedPost(null); }}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }

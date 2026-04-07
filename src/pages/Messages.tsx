@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,18 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+function ConvoSkeleton() {
+  return (
+    <div className="flex items-center gap-3 px-4 animate-pulse" style={{ height: 72 }}>
+      <div className="h-11 w-11 rounded-full bg-secondary shrink-0" />
+      <div className="flex-1 space-y-2">
+        <div className="h-3.5 bg-secondary rounded w-1/3" />
+        <div className="h-3 bg-secondary rounded w-2/3" />
+      </div>
+    </div>
+  );
+}
+
 export default function Messages() {
   const location = useLocation();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -49,64 +61,52 @@ export default function Messages() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const profilesMapRef = useRef<Map<string, MsgProfile>>(new Map());
 
-  const fetchMessages = async (userId: string) => {
-    // Step 1: fetch raw messages without FK-aliased joins
-    console.log('[Messages] fetching for userId:', userId);
-    const { data, error } = await supabase
+  const buildConversations = useCallback((msgs: RawMessage[], userId: string) => {
+    const map = new Map<string, Conversation>();
+    for (const msg of msgs) {
+      const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
+      const partner = profilesMapRef.current.get(partnerId);
+      if (!partner) continue;
+      if (!map.has(partnerId)) {
+        map.set(partnerId, { partner, lastMessage: msg.content, lastTime: msg.created_at });
+      }
+    }
+    setConversations(Array.from(map.values()));
+  }, []);
+
+  const fetchMessages = useCallback(async (userId: string) => {
+    const { data } = await supabase
       .from('messages')
       .select('id, sender_id, receiver_id, content, created_at')
       .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
       .order('created_at', { ascending: false });
 
-    if (error) console.error('[Messages] fetch error:', error);
     const msgs = (data as RawMessage[]) ?? [];
-    console.log('[Messages] raw messages count:', msgs.length);
 
-    // Step 2: collect unique partner IDs
     const partnerIdSet = new Set<string>();
     for (const m of msgs) {
       partnerIdSet.add(m.sender_id === userId ? m.receiver_id : m.sender_id);
     }
     const partnerIds = Array.from(partnerIdSet);
-    console.log('[Messages] partner IDs collected:', partnerIds);
 
-    // Step 3: fetch profiles for all partners in one query
-    const profilesMap = new Map<string, MsgProfile>();
     if (partnerIds.length > 0) {
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, username, avatar_url, user_type')
         .in('id', partnerIds);
-      if (profilesError) console.error('[Messages] profiles fetch error:', profilesError);
-      console.log('[Messages] profiles fetched:', profiles?.length ?? 0, profiles);
       if (profiles) {
-        for (const p of profiles as MsgProfile[]) profilesMap.set(p.id, p);
+        for (const p of profiles as MsgProfile[]) profilesMapRef.current.set(p.id, p);
       }
     }
 
     setAllMessages(msgs);
-    buildConversations(msgs, userId, profilesMap);
-    return profilesMap;
-  };
+    buildConversations(msgs, userId);
+    return profilesMapRef.current;
+  }, [buildConversations]);
 
-  const buildConversations = (msgs: RawMessage[], userId: string, profilesMap: Map<string, MsgProfile>) => {
-    const map = new Map<string, Conversation>();
-    for (const msg of msgs) {
-      const partnerId = msg.sender_id === userId ? msg.receiver_id : msg.sender_id;
-      const partner = profilesMap.get(partnerId);
-      if (!partner) continue;
-      if (!map.has(partnerId)) {
-        map.set(partnerId, {
-          partner,
-          lastMessage: msg.content,
-          lastTime: msg.created_at,
-        });
-      }
-    }
-    setConversations(Array.from(map.values()));
-  };
-
+  // ── Initial load ─────────────────────────────────────────────────────
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -115,14 +115,12 @@ export default function Messages() {
       const profilesMap = await fetchMessages(user.id);
       setLoading(false);
 
-      // If navigated here from a profile's Message button, open that thread
       const openWith = location.state?.openConversationWith as string | undefined;
       if (openWith) {
-        const existing = profilesMap?.get(openWith);
+        const existing = profilesMap.get(openWith);
         if (existing) {
           setSelectedPartner(existing);
         } else {
-          // No existing conversation — fetch the profile directly
           const { data } = await supabase
             .from('profiles')
             .select('id, full_name, username, avatar_url, user_type')
@@ -133,9 +131,41 @@ export default function Messages() {
       }
     };
     init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Scroll to bottom when thread changes
+  // ── Realtime: subscribe to new messages when a thread is open ────────
+  useEffect(() => {
+    if (!selectedPartner || !currentUserId) return;
+
+    const partnerId = selectedPartner.id;
+
+    const channel = supabase
+      .channel(`thread-${currentUserId}-${partnerId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const msg = payload.new as RawMessage;
+          // Only handle messages in this thread
+          const isThisThread =
+            (msg.sender_id === currentUserId && msg.receiver_id === partnerId) ||
+            (msg.sender_id === partnerId && msg.receiver_id === currentUserId);
+          if (!isThisThread) return;
+
+          // Skip messages we already have (optimistic duplicates)
+          setAllMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [msg, ...prev];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedPartner, currentUserId]);
+
+  // ── Scroll to bottom on new messages ────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedPartner, allMessages]);
@@ -153,8 +183,9 @@ export default function Messages() {
     if (!messageText.trim() || !currentUserId || !selectedPartner || isSending) return;
     setIsSending(true);
 
+    const optimisticId = `temp-${Date.now()}`;
     const optimistic: RawMessage = {
-      id: `temp-${Date.now()}`,
+      id: optimisticId,
       sender_id: currentUserId,
       receiver_id: selectedPartner.id,
       content: messageText.trim(),
@@ -163,14 +194,28 @@ export default function Messages() {
     setAllMessages(prev => [optimistic, ...prev]);
     setMessageText('');
 
-    await supabase.from('messages').insert({
-      sender_id: currentUserId,
-      receiver_id: selectedPartner.id,
-      content: optimistic.content,
-    });
+    const { data: inserted } = await supabase
+      .from('messages')
+      .insert({
+        sender_id: currentUserId,
+        receiver_id: selectedPartner.id,
+        content: optimistic.content,
+      })
+      .select('id, sender_id, receiver_id, content, created_at')
+      .single();
 
-    // Refetch to get server-confirmed message
-    await fetchMessages(currentUserId);
+    // Replace optimistic message with real one
+    if (inserted) {
+      setAllMessages(prev =>
+        prev.map(m => m.id === optimisticId ? inserted as RawMessage : m)
+      );
+      // Update conversations list
+      buildConversations(
+        allMessages.map(m => m.id === optimisticId ? inserted as RawMessage : m),
+        currentUserId
+      );
+    }
+
     setIsSending(false);
   };
 
@@ -196,9 +241,13 @@ export default function Messages() {
           >
             <ArrowLeft className="h-4 w-4 text-foreground" />
           </button>
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-xs font-bold text-primary-foreground">
-            {getInitials(displayName(selectedPartner))}
-          </div>
+          {selectedPartner.avatar_url ? (
+            <img src={selectedPartner.avatar_url} alt={displayName(selectedPartner)} className="h-9 w-9 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-xs font-bold text-primary-foreground">
+              {getInitials(displayName(selectedPartner))}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">{displayName(selectedPartner)}</p>
             <p className="text-[10px] text-muted-foreground capitalize">{partnerType}</p>
@@ -214,14 +263,15 @@ export default function Messages() {
           )}
           {threadMessages.map(msg => {
             const isMine = msg.sender_id === currentUserId;
+            const isOptimistic = msg.id.startsWith('temp-');
             return (
               <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed transition-opacity ${
                     isMine
                       ? 'bg-primary text-primary-foreground rounded-br-sm'
                       : 'bg-secondary text-foreground rounded-bl-sm'
-                  }`}
+                  } ${isOptimistic ? 'opacity-60' : 'opacity-100'}`}
                 >
                   <p>{msg.content}</p>
                   <p className={`text-[10px] mt-1 ${isMine ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
@@ -240,7 +290,7 @@ export default function Messages() {
             placeholder="Type a message..."
             value={messageText}
             onChange={e => setMessageText(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             className="bg-secondary border-border min-h-[44px] flex-1"
           />
           <Button
@@ -273,8 +323,8 @@ export default function Messages() {
         </div>
 
         {loading && (
-          <div className="flex justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <div className="space-y-1">
+            {Array.from({ length: 5 }).map((_, i) => <ConvoSkeleton key={i} />)}
           </div>
         )}
 
@@ -300,9 +350,13 @@ export default function Messages() {
                   <span className={`absolute top-2 right-3 text-[8px] font-bold uppercase px-1 py-0.5 rounded ${getTypeBadgeStyle(pt)}`}>
                     {pt}
                   </span>
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-sm font-bold text-primary-foreground">
-                    {getInitials(displayName(c.partner))}
-                  </div>
+                  {c.partner.avatar_url ? (
+                    <img src={c.partner.avatar_url} alt={displayName(c.partner)} className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-primary text-sm font-bold text-primary-foreground">
+                      {getInitials(displayName(c.partner))}
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-sm truncate text-foreground">{displayName(c.partner)}</span>

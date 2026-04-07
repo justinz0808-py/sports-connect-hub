@@ -81,7 +81,7 @@ export default function Notifications() {
       setLoading(false);
     };
     init();
-  }, []);
+  }, [navigate]);
 
   const markAllRead = async () => {
     if (!currentUserId) return;
