@@ -221,7 +221,7 @@ export function getTypeBorderColor(type: string): string {
 
 export function getTypeBadgeStyle(type: string): string {
   switch (type) {
-    case 'athlete': return 'bg-type-athlete text-white';
+    case 'athlete': return 'bg-type-athlete text-black';
     case 'coach': return 'bg-type-coach text-white';
     case 'recruiter': return 'bg-type-recruiter text-white';
     default: return 'bg-muted text-muted-foreground';

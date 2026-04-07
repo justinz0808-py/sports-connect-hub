@@ -146,9 +146,9 @@ export default function Landing() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { name: 'Marcus Johnson', role: 'ATHLETE', sport: 'Basketball • PG', stat: '18.5 PPG', color: '#C2410C' },
-                { name: 'Coach Williams', role: 'COACH', sport: 'Lincoln High School', stat: '12 Recruits', color: '#1D4ED8' },
-                { name: 'Sarah Martinez', role: 'ATHLETE', sport: 'Soccer • Forward', stat: '22 Goals', color: '#C2410C' },
+                { name: 'Marcus Johnson', role: 'ATHLETE', sport: 'Basketball • PG', stat: '18.5 PPG', color: '#F59E0B' },
+                { name: 'Coach Williams', role: 'COACH', sport: 'Lincoln High School', stat: '12 Recruits', color: '#3B82F6' },
+                { name: 'Sarah Martinez', role: 'ATHLETE', sport: 'Soccer • Forward', stat: '22 Goals', color: '#F59E0B' },
               ].map((card) => (
                 <div
                   key={card.name}
