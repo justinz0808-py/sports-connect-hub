@@ -163,7 +163,15 @@ export default function Feed() {
         if (likesRes.data) {
           setLikedPosts(new Set(likesRes.data.map((l: { post_id: string }) => l.post_id)));
         }
-        if (profileRes.data) setCurrentUserProfile(profileRes.data as StoryProfile);
+
+        if (profileRes.data) {
+          // Redirect to profile setup if username is not set
+          if (!profileRes.data.username) {
+            navigate('/profile/setup');
+            return;
+          }
+          setCurrentUserProfile(profileRes.data as StoryProfile);
+        }
 
         const followingIds = (followsRes.data ?? []).map((f: { following_id: string }) => f.following_id);
         if (followingIds.length > 0) {
@@ -181,7 +189,7 @@ export default function Feed() {
     };
 
     init();
-  }, [fetchPostsPage]);
+  }, [fetchPostsPage, navigate]);
 
   // ── Realtime: new posts ──────────────────────────────────────────────
   useEffect(() => {
@@ -605,7 +613,11 @@ export default function Feed() {
                     </span>
                   </div>
 
-                  <div className="flex items-start gap-3">
+                  {/* Clickable author row */}
+                  <button
+                    className="flex items-start gap-3 w-full pr-20 text-left active:opacity-70 transition-opacity"
+                    onClick={() => navigate(`/profile/${post.user_id}`)}
+                  >
                     {profile?.avatar_url ? (
                       <img src={profile.avatar_url} alt={displayName} className="h-10 w-10 shrink-0 rounded-full object-cover" />
                     ) : (
@@ -614,108 +626,110 @@ export default function Feed() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap pr-20">
-                        <span className="text-base">{displayName}</span>
-                      </div>
+                      <span className="text-base">{displayName}</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         {post.sport && (
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">{post.sport}</Badge>
                         )}
                         <span className="text-xs text-muted-foreground">{timeAgo(post.created_at)}</span>
                       </div>
-                      <p className="mt-3 text-sm leading-relaxed">{post.content}</p>
-
-                      {post.image_url && (
-                        <img
-                          src={post.image_url}
-                          alt="Post"
-                          onClick={() => setViewingImage(post.image_url!)}
-                          className="mt-3 rounded-lg w-full max-h-80 object-cover cursor-pointer"
-                        />
-                      )}
-                      {post.video_url && (
-                        <video
-                          src={post.video_url}
-                          controls
-                          playsInline
-                          className="mt-3 rounded-lg w-full max-h-80 bg-black"
-                        />
-                      )}
-
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-6 mt-4 text-muted-foreground">
-                        <button
-                          onClick={() => toggleLike(post.id)}
-                          className={`flex items-center gap-1.5 text-xs min-h-[44px] min-w-[44px] justify-center transition-all active:scale-[0.9] ${isLiked ? 'text-primary' : 'hover:text-foreground'}`}
-                        >
-                          <Heart className={`h-4 w-4 ${isLiked ? 'fill-primary' : ''}`} />
-                          {post.likes_count ?? 0}
-                        </button>
-                        <button
-                          onClick={() => toggleComments(post.id)}
-                          className={`flex items-center gap-1.5 text-xs min-h-[44px] min-w-[44px] justify-center active:scale-[0.9] transition-all hover:text-foreground ${isCommentsOpen ? 'text-primary' : ''}`}
-                        >
-                          <MessageCircle className={`h-4 w-4 ${isCommentsOpen ? 'fill-primary/20' : ''}`} />
-                          {post.comments_count ?? 0}
-                        </button>
-                        <button
-                          onClick={() => handleShare(post.id)}
-                          className="flex items-center gap-1.5 text-xs min-h-[44px] min-w-[44px] justify-center active:scale-[0.9] active:text-primary transition-all hover:text-foreground"
-                        >
-                          <Share2 className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      {/* Comments section */}
-                      {isCommentsOpen && (
-                        <div className="mt-3 pt-3 border-t border-border space-y-3">
-                          {commentLoading.has(post.id) ? (
-                            <div className="flex justify-center py-2">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                            </div>
-                          ) : (
-                            <>
-                              {(comments[post.id] ?? []).length === 0 && (
-                                <p className="text-xs text-muted-foreground text-center">No comments yet.</p>
-                              )}
-                              {(comments[post.id] ?? []).map(comment => {
-                                const name = comment.profiles?.full_name ?? comment.profiles?.username ?? 'Unknown';
-                                return (
-                                  <div key={comment.id} className="flex gap-2 items-start">
-                                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-foreground">
-                                      {getInitials(name)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-medium text-foreground">{name}</p>
-                                      <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{comment.content}</p>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                              <div className="flex gap-2 mt-2">
-                                <Input
-                                  placeholder="Add a comment..."
-                                  value={commentInputs[post.id] ?? ''}
-                                  onChange={e => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                                  onKeyDown={e => e.key === 'Enter' && submitComment(post.id)}
-                                  className="bg-secondary border-border text-foreground text-xs h-9 flex-1"
-                                />
-                                <Button
-                                  size="icon"
-                                  className="h-9 w-9 shrink-0"
-                                  onClick={() => submitComment(post.id)}
-                                  disabled={!commentInputs[post.id]?.trim() || commentSubmitting.has(post.id)}
-                                >
-                                  {commentSubmitting.has(post.id)
-                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <Send className="h-3 w-3" />}
-                                </Button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
                     </div>
+                  </button>
+
+                  {/* Post body */}
+                  <div className="mt-3">
+                    <p className="text-sm leading-relaxed">{post.content}</p>
+
+                    {post.image_url && (
+                      <img
+                        src={post.image_url}
+                        alt="Post"
+                        onClick={(e) => { e.stopPropagation(); setViewingImage(post.image_url!); }}
+                        className="mt-3 rounded-lg w-full max-h-80 object-cover cursor-pointer"
+                      />
+                    )}
+                    {post.video_url && (
+                      <video
+                        src={post.video_url}
+                        controls
+                        playsInline
+                        className="mt-3 rounded-lg w-full max-h-80 bg-black"
+                      />
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-6 mt-4 text-muted-foreground">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleLike(post.id); }}
+                        className={`flex items-center gap-1.5 text-xs min-h-[44px] min-w-[44px] justify-center transition-all active:scale-[0.9] ${isLiked ? 'text-primary' : 'hover:text-foreground'}`}
+                      >
+                        <Heart className={`h-4 w-4 ${isLiked ? 'fill-primary' : ''}`} />
+                        {post.likes_count ?? 0}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleComments(post.id); }}
+                        className={`flex items-center gap-1.5 text-xs min-h-[44px] min-w-[44px] justify-center active:scale-[0.9] transition-all hover:text-foreground ${isCommentsOpen ? 'text-primary' : ''}`}
+                      >
+                        <MessageCircle className={`h-4 w-4 ${isCommentsOpen ? 'fill-primary/20' : ''}`} />
+                        {post.comments_count ?? 0}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleShare(post.id); }}
+                        className="flex items-center gap-1.5 text-xs min-h-[44px] min-w-[44px] justify-center active:scale-[0.9] active:text-primary transition-all hover:text-foreground"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Comments section */}
+                    {isCommentsOpen && (
+                      <div className="mt-3 pt-3 border-t border-border space-y-3">
+                        {commentLoading.has(post.id) ? (
+                          <div className="flex justify-center py-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <>
+                            {(comments[post.id] ?? []).length === 0 && (
+                              <p className="text-xs text-muted-foreground text-center">No comments yet.</p>
+                            )}
+                            {(comments[post.id] ?? []).map(comment => {
+                              const name = comment.profiles?.full_name ?? comment.profiles?.username ?? 'Unknown';
+                              return (
+                                <div key={comment.id} className="flex gap-2 items-start">
+                                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-foreground">
+                                    {getInitials(name)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium text-foreground">{name}</p>
+                                    <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{comment.content}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            <div className="flex gap-2 mt-2">
+                              <Input
+                                placeholder="Add a comment..."
+                                value={commentInputs[post.id] ?? ''}
+                                onChange={e => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                                onKeyDown={e => e.key === 'Enter' && submitComment(post.id)}
+                                className="bg-secondary border-border text-foreground text-xs h-9 flex-1"
+                              />
+                              <Button
+                                size="icon"
+                                className="h-9 w-9 shrink-0"
+                                onClick={() => submitComment(post.id)}
+                                disabled={!commentInputs[post.id]?.trim() || commentSubmitting.has(post.id)}
+                              >
+                                {commentSubmitting.has(post.id)
+                                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                                  : <Send className="h-3 w-3" />}
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -748,7 +762,7 @@ export default function Feed() {
       <CreatePostModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        onPostCreated={fetchPosts}
+        onPostCreated={(newPost) => setPosts(prev => [newPost as unknown as Post, ...prev])}
       />
 
       {/* Full-screen image viewer */}

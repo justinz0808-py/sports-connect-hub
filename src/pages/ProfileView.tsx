@@ -79,6 +79,7 @@ export default function ProfileView() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
@@ -92,6 +93,7 @@ export default function ProfileView() {
   const [followingCount, setFollowingCount] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isCoverUploading, setIsCoverUploading] = useState(false);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
 
   // Post modal
   const [selectedPost, setSelectedPost] = useState<PostForModal | null>(null);
@@ -229,6 +231,45 @@ export default function ProfileView() {
     if (coverInputRef.current) coverInputRef.current.value = '';
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUserId) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Image too large', description: 'Please choose an image under 5MB.', variant: 'destructive' });
+      return;
+    }
+
+    setIsAvatarUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `${currentUserId}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('Avatar')
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      toast({ title: 'Upload failed', description: uploadError.message, variant: 'destructive' });
+      setIsAvatarUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('Avatar').getPublicUrl(path);
+
+    await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUserId);
+    setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
+    toast({ title: 'Profile photo updated!' });
+    setIsAvatarUploading(false);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!currentUserId) return;
+    await supabase.from('profiles').update({ avatar_url: null }).eq('id', currentUserId);
+    setProfile(prev => prev ? { ...prev, avatar_url: null } : null);
+    toast({ title: 'Profile photo removed' });
+  };
+
   const openPost = (post: GridPost) => {
     setSelectedPost(post as PostForModal);
     setModalOpen(true);
@@ -304,26 +345,58 @@ export default function ProfileView() {
           )}
 
           {/* Avatar */}
-          <div
-            className="absolute -bottom-10 left-4 flex h-20 w-20 items-center justify-center rounded-full bg-card text-2xl font-bold text-foreground border-4 border-background overflow-hidden"
-            style={{ boxShadow: `0 0 0 2px ${borderColor}` }}
-          >
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
-            ) : (
-              getInitials(displayName)
+          <div className="absolute -bottom-10 left-4">
+            <div
+              className="relative flex h-20 w-20 items-center justify-center rounded-full bg-card text-2xl font-bold text-foreground border-4 border-background overflow-hidden"
+              style={{ boxShadow: `0 0 0 2px ${borderColor}` }}
+            >
+              {isAvatarUploading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              ) : profile.avatar_url ? (
+                <img src={profile.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                getInitials(displayName)
+              )}
+
+              {/* Camera overlay — own profile only */}
+              {isOwnProfile && (
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isAvatarUploading}
+                  className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 active:opacity-100 transition-opacity"
+                  aria-label="Change profile photo"
+                >
+                  <Camera className="h-5 w-5 text-white" />
+                </button>
+              )}
+            </div>
+
+            {isOwnProfile && (
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
             )}
           </div>
         </div>
 
         <div className="px-4 pt-14">
-          {/* Name + badge */}
+          {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl">{displayName}</h1>
             {profile.is_verified && <CheckCircle className="h-5 w-5 text-verified" />}
             <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${getTypeBadgeStyle(userType)}`}>
               {userType}
             </span>
+            {isCoach && (
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
+                style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: 'rgb(234,179,8)', border: '1px solid rgba(234,179,8,0.3)' }}>
+                Looking for Athletes
+              </span>
+            )}
           </div>
 
           {/* Sub-line */}
@@ -332,7 +405,11 @@ export default function ProfileView() {
               {[profile.position, profile.sport].filter(Boolean).join(' · ')}
             </p>
           )}
-          {isCoach && <p className="text-type-coach font-semibold mt-1 text-sm">Coach</p>}
+          {isCoach && (
+            <p className="text-type-coach font-semibold mt-1 text-sm">
+              {profile.sport ? `Coach · ${profile.sport}` : 'Coach'}
+            </p>
+          )}
           {userType === 'recruiter' && <p className="text-type-recruiter font-semibold mt-1 text-sm">Recruiter</p>}
 
           {/* Meta */}
@@ -407,6 +484,16 @@ export default function ProfileView() {
               >
                 Edit Profile
               </Button>
+              {profile.avatar_url && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive text-xs px-2"
+                  onClick={handleRemoveAvatar}
+                >
+                  Remove Photo
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -418,15 +505,15 @@ export default function ProfileView() {
             </div>
           )}
 
-          {/* Bio */}
+          {/* Bio / Coaching Experience */}
           {profile.bio && (
             <div className={`glass-card p-4 rounded-xl mt-4 border-l-4 ${getTypeBorderColor(userType)}`}>
-              <h2 className="text-lg mb-2">ABOUT</h2>
+              <h2 className="text-lg mb-2">{isCoach ? 'COACHING EXPERIENCE' : 'ABOUT'}</h2>
               <p className="text-muted-foreground leading-relaxed text-sm">{profile.bio}</p>
             </div>
           )}
 
-          {/* Measurements */}
+          {/* Athlete: Measurements */}
           {isAthlete && (profile.height || profile.weight) && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(userType)}`}>
               <h2 className="text-lg mb-2">MEASUREMENTS</h2>
@@ -447,7 +534,7 @@ export default function ProfileView() {
             </div>
           )}
 
-          {/* School */}
+          {/* Athlete: School */}
           {isAthlete && profile.school && (
             <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(userType)}`}>
               <h2 className="text-lg mb-2">SCHOOL</h2>
@@ -455,6 +542,14 @@ export default function ProfileView() {
               {profile.grad_year && (
                 <p className="text-sm text-muted-foreground">Class of {profile.grad_year}</p>
               )}
+            </div>
+          )}
+
+          {/* Coach: School */}
+          {isCoach && profile.school && (
+            <div className={`glass-card p-4 rounded-xl mt-3 border-l-4 ${getTypeBorderColor(userType)}`}>
+              <h2 className="text-lg mb-2">SCHOOL</h2>
+              <p className="font-medium text-sm">{profile.school}</p>
             </div>
           )}
         </div>

@@ -13,7 +13,7 @@ const MAX_CHARS = 500;
 interface CreatePostModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onPostCreated?: () => void;
+  onPostCreated?: (post: Record<string, unknown>) => void;
 }
 
 export default function CreatePostModal({ open, onOpenChange, onPostCreated }: CreatePostModalProps) {
@@ -130,13 +130,13 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated }: C
       setIsUploading(false);
     }
 
-    const { error } = await supabase.from('posts').insert({
+    const { data: insertedPost, error } = await supabase.from('posts').insert({
       user_id: user.id,
       content: content.trim(),
       ...(sport ? { sport } : {}),
       ...(image_url ? { image_url } : {}),
       ...(video_url ? { video_url } : {}),
-    });
+    }).select('id').single();
 
     if (error) {
       toast({ title: 'Failed to post', description: error.message, variant: 'destructive' });
@@ -148,7 +148,15 @@ export default function CreatePostModal({ open, onOpenChange, onPostCreated }: C
     resetForm();
     setIsSubmitting(false);
     onOpenChange(false);
-    onPostCreated?.();
+
+    if (onPostCreated && insertedPost?.id) {
+      const { data: newPost } = await supabase
+        .from('posts')
+        .select('*, profiles(*)')
+        .eq('id', insertedPost.id)
+        .single();
+      if (newPost) onPostCreated(newPost as Record<string, unknown>);
+    }
   };
 
   const charsLeft = MAX_CHARS - content.length;

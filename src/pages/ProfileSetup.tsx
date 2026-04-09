@@ -49,14 +49,18 @@ const ProfileSetup = () => {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
+  const [userType, setUserType] = useState("athlete");
 
-  // Step 2 — Athletic Info
+  // Step 2 — Athlete fields
   const [sport, setSport] = useState("");
   const [position, setPosition] = useState("");
   const [school, setSchool] = useState("");
   const [gradYear, setGradYear] = useState("");
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
+
+  // Step 2 — Coach-specific fields
+  const [coachingLevel, setCoachingLevel] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -83,6 +87,7 @@ const ProfileSetup = () => {
       const meta = user.user_metadata ?? {};
       if (meta.full_name) setDisplayName(meta.full_name);
       if (meta.sport) setSport(meta.sport.toLowerCase());
+      if (meta.user_type) setUserType(meta.user_type);
       setIsLoading(false);
     });
   }, [navigate]);
@@ -100,7 +105,7 @@ const ProfileSetup = () => {
 
   const validateStep2 = () => {
     const e: Record<string, string> = {};
-    if (!sport) e.sport = "Select your sport";
+    if (!sport) e.sport = userType === "coach" ? "Select your sport specialty" : "Select your sport";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -146,11 +151,13 @@ const ProfileSetup = () => {
         bio,
         location,
         sport,
-        position,
+        user_type: userType,
+        position: userType !== "coach" ? position : null,
         school,
-        grad_year: gradYear ? parseInt(gradYear) : null,
-        height,
-        weight,
+        grad_year: userType !== "coach" && gradYear ? parseInt(gradYear) : null,
+        height: userType !== "coach" ? height : null,
+        weight: userType !== "coach" ? weight : null,
+        ...(userType === "coach" && coachingLevel ? { coaching_level: coachingLevel } : {}),
         ...(avatar_url ? { avatar_url } : {}),
       })
       .eq("id", user.id);
@@ -166,7 +173,7 @@ const ProfileSetup = () => {
     }
 
     setIsSaving(false);
-    setStep(3);
+    navigate("/feed");
   };
 
   const inputCls = (field: string) =>
@@ -290,6 +297,20 @@ const ProfileSetup = () => {
               </div>
 
               <div className="space-y-1.5">
+                <Label className="text-sm text-muted-foreground">I am a...</Label>
+                <Select value={userType} onValueChange={setUserType}>
+                  <SelectTrigger className="h-11 bg-secondary border-border text-foreground">
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="athlete">Athlete</SelectItem>
+                    <SelectItem value="coach">Coach</SelectItem>
+                    <SelectItem value="recruiter">Recruiter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm text-muted-foreground">Bio</Label>
                   <span
@@ -334,24 +355,29 @@ const ProfileSetup = () => {
           </>
         )}
 
-        {/* ── Step 2: Athletic Info ── */}
+        {/* ── Step 2: Athletic / Coaching Info ── */}
         {step === 2 && (
           <>
-            <h2 className="text-xl font-semibold text-foreground mb-1">Athletic Info</h2>
+            <h2 className="text-xl font-semibold text-foreground mb-1">
+              {userType === "coach" ? "Coaching Info" : "Athletic Info"}
+            </h2>
             <p className="text-sm text-muted-foreground mb-5">
-              Share your sport and stats.
+              {userType === "coach" ? "Share your coaching background." : "Share your sport and stats."}
             </p>
 
             <div className="space-y-4">
+              {/* Sport — shown for all roles */}
               <div className="space-y-1.5">
-                <Label className="text-sm text-muted-foreground">Sport</Label>
+                <Label className="text-sm text-muted-foreground">
+                  {userType === "coach" ? "Sport Specialty" : "Sport"}
+                </Label>
                 <Select value={sport} onValueChange={setSport}>
                   <SelectTrigger
                     className={`h-11 bg-secondary border-border text-foreground ${
                       errors.sport ? "border-destructive ring-1 ring-destructive" : ""
                     }`}
                   >
-                    <SelectValue placeholder="Select your sport" />
+                    <SelectValue placeholder={userType === "coach" ? "Select sport specialty" : "Select your sport"} />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border">
                     {SPORTS.map((s) => (
@@ -366,62 +392,97 @@ const ProfileSetup = () => {
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-sm text-muted-foreground">Position</Label>
-                <Input
-                  placeholder="e.g. Point Guard, Quarterback"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                  className={inputCls("position")}
-                />
-              </div>
+              {/* Athlete-only fields */}
+              {userType !== "coach" && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-muted-foreground">Position</Label>
+                    <Input
+                      placeholder="e.g. Point Guard, Quarterback"
+                      value={position}
+                      onChange={(e) => setPosition(e.target.value)}
+                      className={inputCls("position")}
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-sm text-muted-foreground">School</Label>
-                <Input
-                  placeholder="School or university name"
-                  value={school}
-                  onChange={(e) => setSchool(e.target.value)}
-                  className={inputCls("school")}
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-muted-foreground">School</Label>
+                    <Input
+                      placeholder="School or university name"
+                      value={school}
+                      onChange={(e) => setSchool(e.target.value)}
+                      className={inputCls("school")}
+                    />
+                  </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-sm text-muted-foreground">Graduation Year</Label>
-                <Select value={gradYear} onValueChange={setGradYear}>
-                  <SelectTrigger className="h-11 bg-secondary border-border text-foreground">
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    {GRAD_YEARS.map((y) => (
-                      <SelectItem key={y} value={y}>
-                        {y}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-muted-foreground">Graduation Year</Label>
+                    <Select value={gradYear} onValueChange={setGradYear}>
+                      <SelectTrigger className="h-11 bg-secondary border-border text-foreground">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {GRAD_YEARS.map((y) => (
+                          <SelectItem key={y} value={y}>
+                            {y}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-sm text-muted-foreground">Height</Label>
-                  <Input
-                    placeholder={`e.g. 6'2"`}
-                    value={height}
-                    onChange={(e) => setHeight(e.target.value)}
-                    className={inputCls("height")}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-sm text-muted-foreground">Weight</Label>
-                  <Input
-                    placeholder="e.g. 185 lbs"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    className={inputCls("weight")}
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm text-muted-foreground">Height</Label>
+                      <Input
+                        placeholder={`e.g. 6'2"`}
+                        value={height}
+                        onChange={(e) => setHeight(e.target.value)}
+                        className={inputCls("height")}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm text-muted-foreground">Weight</Label>
+                      <Input
+                        placeholder="e.g. 185 lbs"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                        className={inputCls("weight")}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Coach-only fields */}
+              {userType === "coach" && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-muted-foreground">School / Organization</Label>
+                    <Input
+                      placeholder="School or organization name"
+                      value={school}
+                      onChange={(e) => setSchool(e.target.value)}
+                      className={inputCls("school")}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm text-muted-foreground">Coaching Level</Label>
+                    <Select value={coachingLevel} onValueChange={setCoachingLevel}>
+                      <SelectTrigger className="h-11 bg-secondary border-border text-foreground">
+                        <SelectValue placeholder="Select coaching level" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        <SelectItem value="youth">Youth</SelectItem>
+                        <SelectItem value="high_school">High School</SelectItem>
+                        <SelectItem value="college">College</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex gap-3 mt-6">
