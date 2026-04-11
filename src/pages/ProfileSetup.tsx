@@ -78,9 +78,19 @@ const ProfileSetup = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) {
         navigate("/auth");
+        return;
+      }
+      // If the user already has a username, their profile is set up — skip to feed
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", user.id)
+        .single();
+      if (profile?.username) {
+        navigate("/feed", { replace: true });
         return;
       }
       setUser(user);
