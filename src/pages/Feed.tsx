@@ -156,9 +156,17 @@ export default function Feed() {
 
         const [likesRes, profileRes, followsRes] = await Promise.all([
           supabase.from('likes').select('post_id').eq('user_id', user.id),
-          supabase.from('profiles').select('id, full_name, username, avatar_url').eq('id', user.id).single(),
+          supabase.from('profiles').select('id, full_name, username, avatar_url, sport').eq('id', user.id).single(),
           supabase.from('follows').select('following_id').eq('follower_id', user.id),
         ]);
+
+        // Redirect to setup if profile is incomplete — covers both new users and
+        // legacy users who may have a username but never completed the sport step.
+        const p = profileRes.data as (StoryProfile & { sport: string | null }) | null;
+        if (!p?.username || !p?.sport) {
+          navigate('/profile/setup', { replace: true });
+          return;
+        }
 
         if (likesRes.data) {
           setLikedPosts(new Set(likesRes.data.map((l: { post_id: string }) => l.post_id)));
